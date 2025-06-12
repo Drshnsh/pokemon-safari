@@ -1,0 +1,2041 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pokémon Safari</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #222; color: #fff; }
+        #game-canvas { display: block; }
+        .ui-font { font-family: 'Press Start 2P', cursive; }
+        .ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; pointer-events: none; -webkit-user-select: none; -ms-user-select: none; user-select: none; }
+        
+        .top-ui-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            pointer-events: auto;
+        }
+
+        #current-ball-display {
+            background-color: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 2px solid #FFDE00;
+            color: #FFDE00;
+            font-size: 10px; 
+            box-shadow: 0 0 10px rgba(255,222,0,0.5);
+            display: flex;
+            align-items: center;
+        }
+        .ball-select-arrow {
+            cursor: pointer;
+            padding: 0 5px;
+            font-size: 14px;
+            color: #FFDE00;
+            -webkit-user-select: none; -ms-user-select: none; user-select: none;
+        }
+         .ball-select-arrow:hover { color: #fff; }
+
+
+        .bottom-panel { display: none; width: calc(100% - 20px); max-width: 700px; margin-bottom: 85px; background-color: rgba(20,20,20,0.85); border: 4px solid #4A4A4A; border-radius: 10px; padding: 12px; box-shadow: 0 0 0 4px #D8D8D8 inset, 0 0 10px rgba(0,0,0,0.3); pointer-events: auto; min-height: 70px; max-height: 20vh; flex-direction: column; justify-content: center; overflow: hidden; color: #eee; }
+        .message-display { font-size: 12px; line-height: 1.5; text-align: left; display: none; }
+        
+        .pokedex-button { padding: 8px 12px; background-color: #FFDE00; border: 2px solid #3B4CCA; border-radius: 8px; color: #3B4CCA; font-size: 12px; cursor: pointer; box-shadow: 2px 2px 0px #CC9900; transition: all 0.1s; }
+        .pokedex-button:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px #CC9900; }
+        
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; pointer-events: auto; }
+        .modal-content { background-color: #2a2a2a; border: 4px solid #4A4A4A; border-radius: 10px; padding: 20px; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; box-shadow: 0 0 0 4px #1a1a1a inset; color: #eee; }
+        .modal-content .pokedex-header, .modal-content .tutorial-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A4A4A; }
+        .modal-content .pokedex-header h3, .modal-content .tutorial-header h3 { font-size: 16px; margin: 0; color: #FFDE00; }
+        .modal-content .pokedex-header #pokedex-score { font-size: 14px; margin: 0; }
+        .modal-content ul { list-style: none; padding: 0; margin: 0; }
+        .modal-content li { padding: 10px 5px; font-size: 12px; display: flex; flex-direction: column; align-items: flex-start; border-bottom: 1px dashed #555; }
+        .modal-content li:last-child { border-bottom: none; }
+        .modal-content li .pokemon-main-info { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px;}
+        .modal-content li .pokemon-info { display: flex; align-items: center; }
+        .modal-content li .pokemon-info span:first-child { margin-right: 12px; font-size: 1.6em; min-width: 30px; text-align: center; }
+        .modal-content li .pokemon-info .habitat-info { font-size: 0.7em; color: #aaa; display: block; margin-top: 3px;}
+        .pokedex-cry-button, .pokedex-fact-button { padding: 5px 8px; font-size: 10px; color: white; border-radius: 5px; cursor: pointer; margin-left: 5px; }
+        .pokedex-cry-button { background-color: #5cb85c; border: 1px solid #4cae4c; } .pokedex-cry-button:hover { background-color: #4cae4c; }
+        .pokedex-fact-button { background-color: #f0ad4e; border: 1px solid #eea236; } .pokedex-fact-button:hover { background-color: #ec971f; }
+        .pokedex-fact-button:disabled { background-color: #777; border-color: #666; cursor: not-allowed; }
+        .pokemon-fact-display { font-size: 0.8em; color: #ccc; margin-top: 5px; padding: 5px; background-color: rgba(0,0,0,0.2); border-radius: 4px; min-height: 20px; width:100%; }
+        .fact-loading-indicator { font-style: italic; color: #aaa; }
+
+        .modal-close-button { display: block; margin-top: 20px; padding: 10px 15px; background-color: #E0E0E0; border: 2px solid #4A4A4A; border-radius: 8px; color: #333; font-size: 14px; cursor: pointer; width: 100%; box-shadow: 2px 2px 0px #888888; }
+        .modal-close-button:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px #888888; }
+        
+        /* Tutorial Modal Specifics */
+        #tutorial-modal .modal-content { max-width: 600px; }
+        #tutorial-modal h4 { font-size: 1.1em; color: #FFDE00; margin-top: 15px; margin-bottom: 5px; }
+        #tutorial-modal p, #tutorial-modal ul { font-size: 0.9em; line-height: 1.6; margin-bottom: 10px; }
+        #tutorial-modal ul { list-style: disc; padding-left: 20px; }
+        #tutorial-modal code { background-color: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 3px; font-size: 0.85em;}
+
+
+        #joystick-container { position: absolute; bottom: 15px; left: 15px; width: 100px; height: 100px; pointer-events: auto; z-index: 10; }
+        #joystick-base { position: absolute; width: 100%; height: 100%; background-color: rgba(80, 80, 80, 0.5); border-radius: 50%; border: 2px solid rgba(200, 200, 200, 0.6); }
+        #joystick-knob { position: absolute; width: 45px; height: 45px; background-color: rgba(150, 150, 150, 0.8); border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.9); top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: grab; }
+        #joystick-knob:active { cursor: grabbing; }
+        
+        /* Encounter / Minigame Styles */
+        #encounter-interface-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 150; pointer-events: auto; }
+        #encounter-pokemon-canvas-container { width: 280px; height: 280px; margin-bottom: 15px; position: relative; overflow: hidden; border-radius:15px; background-color: #4a5568; border: 3px solid #718096; }
+        #encounter-pokemon-canvas { display: block; width: 100%; height: 100%; }
+        #encounter-status-message { color: #FFDE00; font-size: 14px; margin-bottom:10px; text-align: center; min-height: 20px; }
+        #catch-circle-area { position: absolute; top: 50%; left: 50%; width: 220px; height: 220px; transform: translate(-50%, -50%); pointer-events: none; display: none; }
+        #catch-target-circle { position: absolute; top: 50%; left: 50%; border: 4px dashed #FFDE00; border-radius: 50%; box-sizing: border-box; transform: translate(-50%, -50%); } 
+        #catch-shrinking-circle { position: absolute; top: 50%; left: 50%; background-color: rgba(76, 175, 80, 0.4); border: 3px solid rgba(255, 255, 255, 0.6); border-radius: 50%; box-sizing: border-box; transform: translate(-50%, -50%); } 
+        
+        .encounter-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-width: 320px; margin-top: 10px;}
+        .encounter-button { padding: 12px 10px; font-size: 13px; color: white; border-radius: 8px; box-shadow: 3px 3px 0px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.1s; text-align: center; }
+        .encounter-button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px rgba(0,0,0,0.3); }
+        .encounter-button:disabled { cursor: not-allowed; opacity: 0.6; }
+        #encounter-throw-ball { background-color: #FF0000; border: 3px solid #A00000; } 
+         #encounter-throw-ball:hover { background-color: #D00000; }
+        #encounter-throw-bait { background-color: #FFD700; border: 3px solid #B8860B; color: #333; } #encounter-throw-bait:hover { background-color: #EEC900; }
+        #encounter-throw-rock { background-color: #A0522D; border: 3px solid #8B4513; } #encounter-throw-rock:hover { background-color: #8B4513; }
+        #encounter-run-away { background-color: #708090; border: 3px solid #4a5568; } #encounter-run-away:hover { background-color: #5a6570; }
+        #throw-timing-button { display: none; margin-top: 15px; padding: 15px 30px; font-size: 16px; background-color: #4CAF50; color: white; border: 3px solid #388E3C; border-radius: 10px; box-shadow: 3px 3px 0px #2E7D32; cursor: pointer; }
+        #throw-timing-button:active { background-color: #388E3C; transform: translate(2px, 2px); box-shadow: 1px 1px 0px #2E7D32; }
+        
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; color: white; }
+        .pokeball-loader { width: 60px; height: 60px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="white" stroke="%23333" stroke-width="4"/><path d="M50,5 A45,45 0 0,0 50,95" fill="%23FF1111" stroke="%23333" stroke-width="0"/><line x1="5" y1="50" x2="95" y2="50" stroke="%23333" stroke-width="6"/><circle cx="50" cy="50" r="15" fill="white" stroke="%23333" stroke-width="4"/><circle cx="50" cy="50" r="8" fill="%23eee" stroke="%23333" stroke-width="2"/></svg>'); background-size: contain; background-repeat: no-repeat; animation: spinPokeball 1.5s linear infinite, wobblePokeball 2s ease-in-out infinite alternate; margin-bottom: 20px; }
+        @keyframes spinPokeball { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes wobblePokeball { 0% { transform: translateY(0px) rotate(-5deg); } 50% { transform: translateY(-10px) rotate(0deg); } 100% { transform: translateY(0px) rotate(5deg); } }
+        .loader-text { font-size: 14px; }
+
+        #encounter-transition-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 190; opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out; }
+        #game-over-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 250; text-align: center; }
+        #game-over-modal h2 { font-size: 24px; color: #FFDE00; margin-bottom: 15px; }
+        #game-over-modal p { font-size: 16px; color: #fff; margin-bottom: 25px; }
+        #restart-game-button { padding: 12px 25px; font-size: 16px; background-color: #FFDE00; color: #3B4CCA; border: 2px solid #3B4CCA; border-radius: 8px; box-shadow: 2px 2px 0px #CC9900; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="pokeball-loader"></div>
+        <p class="ui-font loader-text">Loading Safari Adventure...</p>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <div class="ui-overlay">
+        <div class="top-ui-container">
+            <div id="current-ball-display" class="ui-font">
+                <span class="ball-select-arrow" id="prev-ball-button"><</span>
+                <span id="ball-name-count">Poké Ball (0)</span>
+                <span class="ball-select-arrow" id="next-ball-button">></span>
+            </div>
+            <button id="pokedex-open-button" class="pokedex-button ui-font">Pokédex</button>
+        </div>
+
+        <div id="bottom-panel" class="bottom-panel">
+            <div id="message-display" class="message-display ui-font"></div>
+        </div>
+        <div id="joystick-container"> <div id="joystick-base"></div> <div id="joystick-knob"></div> </div>
+    </div>
+    
+    <div id="pokedex-modal" class="modal"> <div class="modal-content"> <div class="pokedex-header"> <h3 class="ui-font">Pokédex</h3> <div id="pokedex-score" class="ui-font">Caught: 0/0</div> </div> <ul id="pokedex-list" class="ui-font"></ul> <button id="pokedex-close-button" class="modal-close-button ui-font">Close</button> </div> </div>
+    
+    <div id="tutorial-modal" class="modal">
+        <div class="modal-content">
+            <div class="tutorial-header">
+                <h3 class="ui-font">Welcome to Pokémon Safari!</h3>
+            </div>
+            <h4 class="ui-font">Goal:</h4>
+            <p>Explore the Safari Zone, find wild Pokémon, and catch 'em all to complete your Pokédex!</p>
+            
+            <h4 class="ui-font">Movement:</h4>
+            <ul>
+                <li><strong>Keyboard:</strong> Use <code>W</code> (Forward), <code>A</code> (Left), <code>S</code> (Backward), <code>D</code> (Right).</li>
+                <li><strong>Joystick:</strong> On touch devices, use the on-screen joystick for movement.</li>
+            </ul>
+
+            <h4 class="ui-font">Exploring:</h4>
+            <p>Drive around to find Pokémon. You'll also find useful items scattered around the area. Drive over them to collect!</p>
+            <ul>
+                <li><strong>Poké Balls:</strong> Various types like Poké Ball, Great Ball, Ultra Ball, and even the rare Master Ball!</li>
+                <li><strong>Bait:</strong> Can make Pokémon less likely to run away.</li>
+            </ul>
+             <p>Use the arrows next to your ball count (top-left) to select different Poké Ball types you've collected.</p>
+
+
+            <h4 class="ui-font">Encounters:</h4>
+            <p>When you get close to a Pokémon, an encounter will begin!</p>
+            <ul>
+                <li><strong>Throw Ball:</strong> Try to catch the Pokémon. The selected ball type affects your chances. Time your throw with the shrinking circle for a better chance!</li>
+                <li><strong>Throw Bait:</strong> Makes the Pokémon less likely to flee, but might make it a bit harder to catch.</li>
+                <li><strong>Throw Rock:</strong> Makes the Pokémon easier to catch, but also more likely to flee.</li>
+                <li><strong>Run Away:</strong> Flee the encounter. Pokémon you run from won't bother you again for a short while.</li>
+            </ul>
+            <p>Be careful! Pokémon can flee after your actions or if a catch fails. You're out of the game if you run out of all Poké Balls!</p>
+
+            <h4 class="ui-font">Pokédex:</h4>
+            <p>Click the "Pokédex" button (top-right) to see all the Pokémon you've caught. You can even hear their cries and get fun facts about them using AI!</p>
+
+            <button id="tutorial-close-button" class="modal-close-button ui-font">Got it! Let's Go!</button>
+        </div>
+    </div>
+
+    <div id="encounter-interface-container">
+        <div id="encounter-pokemon-canvas-container">
+            <canvas id="encounter-pokemon-canvas"></canvas>
+            <div id="catch-circle-area"> 
+                <div id="catch-target-circle"></div>
+                <div id="catch-shrinking-circle"></div>
+            </div>
+        </div>
+        <div id="encounter-status-message" class="ui-font">Wild Pokémon Appeared!</div>
+        <div class="encounter-controls">
+            <button id="encounter-throw-ball" class="encounter-button ui-font">THROW BALL</button> 
+            <button id="encounter-throw-bait" class="encounter-button ui-font">THROW BAIT</button>
+            <button id="encounter-throw-rock" class="encounter-button ui-font">THROW ROCK</button>
+            <button id="encounter-run-away" class="encounter-button ui-font">RUN AWAY</button>
+        </div>
+        <button id="throw-timing-button" class="ui-font">THROW!</button>
+    </div>
+
+    <div id="encounter-transition-overlay"></div>
+    <div id="game-over-modal" class="ui-font">
+        <h2>Out of Poké Balls!</h2>
+        <p>Your Safari adventure has ended.</p>
+        <p id="final-score-display"></p>
+        <button id="restart-game-button" class="ui-font">Play Again</button>
+    </div>
+
+
+    <script>
+        // --- Enhanced Game Constants ---
+        const MODEL_WORLD_SIZE_MULTIPLIER = 3.5; 
+        const DEFAULT_FLYING_HEIGHT = 2.0; 
+        const WATER_LEVEL_Y = 0.1; 
+        const FOREST_AREA_SIZE = 550; 
+        const WATER_ZONE_SETTINGS = { xMin: -FOREST_AREA_SIZE / 5, xMax: FOREST_AREA_SIZE / 5, zMin: -FOREST_AREA_SIZE / 2.2, zMax: -FOREST_AREA_SIZE / 4.5 };
+        const RARITY_WEIGHTS = { common: 30, uncommon: 20, rare: 10, very_rare: 4, legendary: 1, mythical: 1 }; 
+
+        const POKEMON_DATA = [
+            // (Full POKEMON_DATA array from previous version, including baseFleeRate)
+             { name: "Bulbasaur", pokedexNumber: 1, color: 0x78C850, emoji: "🐢", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 0.7, movementType: 'ground', habitat: ['grassland', 'forest', 'viridian_forest'], rarity: 'uncommon' },
+            { name: "Ivysaur", pokedexNumber: 2, color: 0x78C850, emoji: "🐢", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.0, movementType: 'ground', habitat: ['grassland', 'forest', 'plains'], rarity: 'rare' },
+            { name: "Venusaur", pokedexNumber: 3, color: 0x78C850, emoji: "🐢", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 2.0, movementType: 'ground', habitat: ['forest', 'deep_jungle', 'sunny_meadows'], rarity: 'very_rare' },
+            { name: "Charmander", pokedexNumber: 4, color: 0xF08030, emoji: "🦎", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 0.6, movementType: 'ground', habitat: ['mountain', 'grassland', 'rocky_areas', 'warm_places'], rarity: 'uncommon' },
+            { name: "Charmeleon", pokedexNumber: 5, color: 0xF08030, emoji: "🦎", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.1, movementType: 'ground', habitat: ['mountain', 'volcanic_areas_edge', 'hot_plains'], rarity: 'rare' },
+            { name: "Charizard", pokedexNumber: 6, color: 0xF08030, emoji: "🐉", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 1.7, movementType: 'flying', flyingHeight: 3.5, habitat: ['sky_high', 'mountain', 'volcanic_areas', 'canyons'], rarity: 'very_rare' },
+            { name: "Squirtle", pokedexNumber: 7, color: 0x6890F0, emoji: "💧", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 0.5, movementType: 'ground', habitat: ['water_edge', 'freshwater_ponds', 'beaches', 'small_islands'], rarity: 'uncommon' },
+            { name: "Wartortle", pokedexNumber: 8, color: 0x6890F0, emoji: "💧", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.0, movementType: 'ground', habitat: ['water_surface', 'rivers', 'sea_shores', 'lakes'], rarity: 'rare' }, 
+            { name: "Blastoise", pokedexNumber: 9, color: 0x6890F0, emoji: "💧", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 1.6, movementType: 'ground', habitat: ['water_surface', 'ocean_shores', 'large_lakes', 'coastal_areas'], rarity: 'very_rare' }, 
+            { name: "Caterpie", pokedexNumber: 10, color: 0xA8B820, emoji: "🐛", baseCatchRate: 0.40, baseFleeRate: 0.25, size: 0.3, movementType: 'ground', habitat: ['forest', 'grassland', 'gardens'], rarity: 'common' },
+            { name: "Metapod", pokedexNumber: 11, color: 0xA8B820, emoji: "🐛", baseCatchRate: 0.30, baseFleeRate: 0.05, size: 0.7, movementType: 'ground', habitat: ['forest', 'grassy_areas', 'tree_branches'], rarity: 'common' }, 
+            { name: "Butterfree", pokedexNumber: 12, color: 0xA890F0, emoji: "🦋", baseCatchRate: 0.20, baseFleeRate: 0.10, size: 1.1, movementType: 'flying', flyingHeight: 2.8, habitat: ['sky_low', 'forest', 'flowery_meadows', 'gardens'], rarity: 'common' },
+            { name: "Weedle", pokedexNumber: 13, color: 0xA8B820, emoji: "🐛", baseCatchRate: 0.40, baseFleeRate: 0.25, size: 0.3, movementType: 'ground', habitat: ['forest', 'grassland', 'bushes'], rarity: 'common' },
+            { name: "Kakuna", pokedexNumber: 14, color: 0xA8B820, emoji: "🐛", baseCatchRate: 0.30, baseFleeRate: 0.05, size: 0.6, movementType: 'ground', habitat: ['forest', 'grassy_areas', 'under_leaves'], rarity: 'common' }, 
+            { name: "Beedrill", pokedexNumber: 15, color: 0xA8A878, emoji: "🐝", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 1.0, movementType: 'flying', flyingHeight: 2.5, habitat: ['sky_low', 'forest', 'wooded_areas', 'near_hives'], rarity: 'uncommon' },
+            { name: "Pidgey", pokedexNumber: 16, color: 0xA890F0, emoji: "🐦", baseCatchRate: 0.35, baseFleeRate: 0.20, size: 0.3, movementType: 'flying', flyingHeight: 2.0, habitat: ['sky_low', 'grassland', 'forest_edge', 'plains'], rarity: 'common' },
+            { name: "Pidgeotto", pokedexNumber: 17, color: 0xA890F0, emoji: "🐦", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 1.1, movementType: 'flying', flyingHeight: 3.0, habitat: ['sky_mid', 'grassland', 'forest', 'wide_open_spaces'], rarity: 'uncommon' },
+            { name: "Pidgeot", pokedexNumber: 18, color: 0xA890F0, emoji: "🐦", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.5, movementType: 'flying', flyingHeight: 4.0, habitat: ['sky_high', 'forest_canopy', 'mountain_tops_lower', 'cliffs'], rarity: 'rare' },
+            { name: "Rattata", pokedexNumber: 19, color: 0xA8A878, emoji: "🐀", baseCatchRate: 0.40, baseFleeRate: 0.30, size: 0.3, movementType: 'ground', habitat: ['grassland', 'urban', 'fields', 'caves_entrance', 'sewers'], rarity: 'common' },
+            { name: "Raticate", pokedexNumber: 20, color: 0xA8A878, emoji: "🐀", baseCatchRate: 0.25, baseFleeRate: 0.20, size: 0.7, movementType: 'ground', habitat: ['grassland', 'urban', 'sewers', 'fields', 'dark_alleys'], rarity: 'uncommon' },
+            { name: "Spearow", pokedexNumber: 21, color: 0xA28D6F, emoji: "🐦", baseCatchRate: 0.40, baseFleeRate: 0.25, size: 0.3, movementType: 'flying', flyingHeight: 1.8, habitat: ['grassland', 'routes', 'mountain_paths'], rarity: 'common' },
+            { name: "Fearow", pokedexNumber: 22, color: 0xAD8E67, emoji: "🦅", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 1.2, movementType: 'flying', flyingHeight: 3.0, habitat: ['sky_mid', 'mountains', 'wastelands', 'open_fields'], rarity: 'uncommon' },
+            { name: "Ekans", pokedexNumber: 23, color: 0xA040A0, emoji: "🐍", baseCatchRate: 0.40, baseFleeRate: 0.25, size: 2.0, movementType: 'ground', habitat: ['grassland', 'savanna', 'forest_floor'], rarity: 'common' },
+            { name: "Arbok", pokedexNumber: 24, color: 0xA040A0, emoji: "🐍", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 3.5, movementType: 'ground', habitat: ['grassland', 'savanna', 'swamp', 'forest'], rarity: 'uncommon' },
+            { name: "Pikachu", pokedexNumber: 25, color: 0xF8D030, emoji: "⚡️", baseCatchRate: 0.18, baseFleeRate: 0.10, size: 0.4, movementType: 'ground', habitat: ['forest', 'power_plant_nearby', 'grassy_plains', 'thunder_mountain_foot'], rarity: 'rare' },
+            { name: "Raichu", pokedexNumber: 26, color: 0xF8B858, emoji: "⚡️", baseCatchRate: 0.12, baseFleeRate: 0.08, size: 0.8, movementType: 'ground', habitat: ['forest', 'power_plants', 'grassy_areas_near_cities'], rarity: 'rare' },
+            { name: "Sandshrew", pokedexNumber: 27, color: 0xE0C068, emoji: "🐾", baseCatchRate: 0.40, baseFleeRate: 0.20, size: 0.6, movementType: 'ground', habitat: ['desert', 'arid_areas', 'sandy_plains', 'caves'], rarity: 'common' },
+            { name: "Sandslash", pokedexNumber: 28, color: 0xD4B754, emoji: "🐾", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['desert', 'arid_mountains', 'deep_caves'], rarity: 'uncommon' },
+            { name: "Nidoran♀", pokedexNumber: 29, color: 0x98A8F0, emoji: "♀️", baseCatchRate: 0.35, baseFleeRate: 0.20, size: 0.4, movementType: 'ground', habitat: ['grassland', 'savanna', 'routes'], rarity: 'common' },
+            { name: "Nidorina", pokedexNumber: 30, color: 0x98A8F0, emoji: "♀️", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 0.8, movementType: 'ground', habitat: ['grassland', 'savanna', 'forest_edge'], rarity: 'uncommon' },
+            { name: "Nidoqueen", pokedexNumber: 31, color: 0x8090E0, emoji: "👑", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.3, movementType: 'ground', habitat: ['grassland', 'mountains', 'rocky_terrain'], rarity: 'rare' },
+            { name: "Nidoran♂", pokedexNumber: 32, color: 0xB8A0E8, emoji: "♂️", baseCatchRate: 0.35, baseFleeRate: 0.20, size: 0.5, movementType: 'ground', habitat: ['grassland', 'savanna', 'routes'], rarity: 'common' },
+            { name: "Nidorino", pokedexNumber: 33, color: 0xB8A0E8, emoji: "♂️", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 0.9, movementType: 'ground', habitat: ['grassland', 'savanna', 'rocky_areas'], rarity: 'uncommon' },
+            { name: "Nidoking", pokedexNumber: 34, color: 0xA080D0, emoji: "👑", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.4, movementType: 'ground', habitat: ['grassland', 'mountains', 'caves', 'plains'], rarity: 'rare' },
+            { name: "Clefairy", pokedexNumber: 35, color: 0xFFB6C1, emoji: "🧚", baseCatchRate: 0.30, baseFleeRate: 0.10, size: 0.6, movementType: 'ground', habitat: ['mountain', 'cave', 'moonlit_areas', 'quiet_forests'], rarity: 'uncommon' },
+            { name: "Clefable", pokedexNumber: 36, color: 0xFFB6C1, emoji: "🧚", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 1.3, movementType: 'ground', habitat: ['mountain_peaks', 'secluded_lakes', 'mysterious_caves'], rarity: 'rare' },
+            { name: "Vulpix", pokedexNumber: 37, color: 0xEE8A54, emoji: "🦊", baseCatchRate: 0.30, baseFleeRate: 0.15, size: 0.6, movementType: 'ground', habitat: ['grassland', 'mountains', 'volcanic_foothills'], rarity: 'uncommon' },
+            { name: "Ninetales", pokedexNumber: 38, color: 0xF8D0A8, emoji: "🦊", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.1, movementType: 'ground', habitat: ['ancient_forests', 'mystical_mountains', 'sacred_grounds'], rarity: 'rare' },
+            { name: "Jigglypuff", pokedexNumber: 39, color: 0xFFAFAF, emoji: "🎤", baseCatchRate: 0.30, baseFleeRate: 0.15, size: 0.5, movementType: 'ground', habitat: ['grassland', 'caves', 'forest_clearings', 'concert_halls_nearby'], rarity: 'common' },
+            { name: "Wigglytuff", pokedexNumber: 40, color: 0xFFAFAF, emoji: "🎶", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.0, movementType: 'ground', habitat: ['grassland', 'caves', 'meadows'], rarity: 'uncommon' },
+            { name: "Zubat", pokedexNumber: 41, color: 0x8A8AFF, emoji: "🦇", baseCatchRate: 0.40, baseFleeRate: 0.25, size: 0.8, movementType: 'flying', flyingHeight: 1.5, habitat: ['cave', 'dark_forests', 'abandoned_buildings_night'], rarity: 'common' },
+            { name: "Golbat", pokedexNumber: 42, color: 0x8A8AFF, emoji: "🦇", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 1.6, movementType: 'flying', flyingHeight: 2.5, habitat: ['cave_deep', 'night_sky', 'ruins'], rarity: 'uncommon' },
+            { name: "Oddish", pokedexNumber: 43, color: 0x8BC34A, emoji: "🌱", baseCatchRate: 0.40, baseFleeRate: 0.20, size: 0.5, movementType: 'ground', habitat: ['forest', 'grassland', 'fertile_soil_areas', 'moonlit_gardens'], rarity: 'common' },
+            { name: "Gloom", pokedexNumber: 44, color: 0x8BC34A, emoji: "🌺", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 0.8, movementType: 'ground', habitat: ['forest', 'jungle', 'swamp', 'gardens_with_strong_scent'], rarity: 'uncommon' },
+            { name: "Vileplume", pokedexNumber: 45, color: 0xC62828, emoji: "🌸", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.2, movementType: 'ground', habitat: ['jungle', 'dense_forest', 'tropical_areas'], rarity: 'rare' },
+            { name: "Paras", pokedexNumber: 46, color: 0xFF7043, emoji: "🍄", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 0.3, movementType: 'ground', habitat: ['forest', 'cave_damp', 'undergrowth'], rarity: 'common' },
+            { name: "Parasect", pokedexNumber: 47, color: 0xFF7043, emoji: "🍄", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['forest_dark', 'cave_deep_damp', 'humid_areas'], rarity: 'uncommon' },
+            { name: "Venonat", pokedexNumber: 48, color: 0x9C27B0, emoji: "👁️", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 1.0, movementType: 'ground', habitat: ['forest_night', 'tall_grass', 'trees'], rarity: 'common' },
+            { name: "Venomoth", pokedexNumber: 49, color: 0xAB47BC, emoji: "🦋", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.5, movementType: 'flying', flyingHeight: 2.0, habitat: ['sky_low_night', 'forest_dense', 'moonlit_plains'], rarity: 'uncommon' },
+            { name: "Diglett", pokedexNumber: 50, color: 0xD2B48C, emoji: "🕳️", baseCatchRate: 0.40, baseFleeRate: 0.25, size: 0.2, movementType: 'ground', habitat: ['cave', 'tunnels', 'sandy_soil_areas', 'dig_sites'], rarity: 'common' },
+            { name: "Dugtrio", pokedexNumber: 51, color: 0xD2B48C, emoji: "🕳️", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 0.7, movementType: 'ground', habitat: ['cave_network', 'deep_tunnels', 'earthquake_zones'], rarity: 'uncommon' },
+            { name: "Meowth", pokedexNumber: 52, color: 0xF5F5DC, emoji: "😼", baseCatchRate: 0.40, baseFleeRate: 0.25, size: 0.4, movementType: 'ground', habitat: ['urban', 'alleys', 'routes_near_cities'], rarity: 'common' },
+            { name: "Persian", pokedexNumber: 53, color: 0xF5F5DC, emoji: "👑", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['urban_luxury', 'savanna', 'plains'], rarity: 'uncommon' },
+            { name: "Psyduck", pokedexNumber: 54, color: 0xFFD700, emoji: "🦆", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 0.8, movementType: 'ground', habitat: ['water_edge', 'lakes', 'rivers', 'ponds'], rarity: 'common' },
+            { name: "Golduck", pokedexNumber: 55, color: 0x4682B4, emoji: "🦆", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.7, movementType: 'ground', habitat: ['lakes', 'rivers', 'ocean_coast', 'swift_currents'], rarity: 'uncommon' },
+            { name: "Mankey", pokedexNumber: 56, color: 0xFFE4B5, emoji: "🐒", baseCatchRate: 0.30, baseFleeRate: 0.25, size: 0.5, movementType: 'ground', habitat: ['mountain', 'forest_trees', 'rocky_hills'], rarity: 'common' },
+            { name: "Primeape", pokedexNumber: 57, color: 0xFFE4B5, emoji: "🦍", baseCatchRate: 0.15, baseFleeRate: 0.20, size: 1.0, movementType: 'ground', habitat: ['mountain_high', 'forest_deep', 'areas_of_conflict'], rarity: 'uncommon' },
+            { name: "Growlithe", pokedexNumber: 58, color: 0xFFA500, emoji: "🐕", baseCatchRate: 0.30, baseFleeRate: 0.15, size: 0.7, movementType: 'ground', habitat: ['grassland', 'volcanic_plains_edge', 'routes_guard_posts'], rarity: 'uncommon' },
+            { name: "Arcanine", pokedexNumber: 59, color: 0xFFA500, emoji: "🐕‍🔥", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.9, movementType: 'ground', habitat: ['grassland_vast', 'mountains_legendary', 'volcanic_peaks'], rarity: 'rare' },
+            { name: "Poliwag", pokedexNumber: 60, color: 0xADD8E6, emoji: "💧", baseCatchRate: 0.40, baseFleeRate: 0.20, size: 0.6, movementType: 'ground', habitat: ['water_surface', 'ponds', 'shallow_rivers', 'freshwater_lakes'], rarity: 'common' },
+            { name: "Poliwhirl", pokedexNumber: 61, color: 0xADD8E6, emoji: "💧", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['water_surface', 'rivers', 'lakes', 'swamps'], rarity: 'uncommon' },
+            { name: "Poliwrath", pokedexNumber: 62, color: 0x4682B4, emoji: "🥊", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.3, movementType: 'ground', habitat: ['water_surface', 'oceans_edge', 'powerful_rivers', 'training_dojos_near_water'], rarity: 'rare' },
+            { name: "Abra", pokedexNumber: 63, color: 0xFFF294, emoji: "✨", baseCatchRate: 0.35, baseFleeRate: 0.50, size: 0.9, movementType: 'floating', flyingHeight: 0.5, habitat: ['urban_quiet', 'psychic_hotspots', 'caves_secluded'], rarity: 'uncommon' }, 
+            { name: "Kadabra", pokedexNumber: 64, color: 0xFFF294, emoji: "🥄", baseCatchRate: 0.20, baseFleeRate: 0.30, size: 1.3, movementType: 'floating', flyingHeight: 0.8, habitat: ['urban_mysterious', 'ancient_sites', 'labs'], rarity: 'rare' },
+            { name: "Alakazam", pokedexNumber: 65, color: 0xFFF294, emoji: "🧙", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 1.5, movementType: 'floating', flyingHeight: 1.0, habitat: ['dimensions_unknown', 'libraries_ancient', 'places_of_power'], rarity: 'very_rare' },
+            { name: "Machop", pokedexNumber: 66, color: 0xC0C0C0, emoji: "?", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 0.8, movementType: 'ground', habitat: ['mountain', 'caves', 'training_grounds', 'construction_sites'], rarity: 'common' },
+            { name: "Machoke", pokedexNumber: 67, color: 0xC0C0C0, emoji: "🏋️", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 1.5, movementType: 'ground', habitat: ['mountain_high', 'caves_rocky', 'gyms', 'power_plants'], rarity: 'uncommon' },
+            { name: "Machamp", pokedexNumber: 68, color: 0xA9A9A9, emoji: "🥊", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.6, movementType: 'ground', habitat: ['mountain_peaks', 'championship_arenas', 'remote_training_locations'], rarity: 'rare' },
+            { name: "Bellsprout", pokedexNumber: 69, color: 0x9CCC65, emoji: "🌱", baseCatchRate: 0.40, baseFleeRate: 0.20, size: 0.7, movementType: 'ground', habitat: ['forest', 'jungle', 'swampy_areas', 'gardens_wild'], rarity: 'common' },
+            { name: "Weepinbell", pokedexNumber: 70, color: 0x9CCC65, emoji: "🌿", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['jungle', 'forest_dense', 'marshes'], rarity: 'uncommon' },
+            { name: "Victreebel", pokedexNumber: 71, color: 0x7CB342, emoji: " carnivorous_plant", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.7, movementType: 'ground', habitat: ['jungle_deep', 'treacherous_swamps', 'hidden_forest_clearings'], rarity: 'rare' },
+            { name: "Tentacool", pokedexNumber: 72, color: 0x81D4FA, emoji: "🦑", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 0.9, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.2, habitat: ['ocean_surface', 'sea_routes', 'beaches_shallow', 'coastal_waters'], rarity: 'common' },
+            { name: "Tentacruel", pokedexNumber: 73, color: 0x81D4FA, emoji: "🐙", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.6, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.5, habitat: ['ocean_deep', 'underwater_caves', 'shipwrecks', 'strong_currents'], rarity: 'uncommon' },
+            { name: "Geodude", pokedexNumber: 74, color: 0xBCAAA4, emoji: "🪨", baseCatchRate: 0.40, baseFleeRate: 0.20, size: 0.4, movementType: 'ground', habitat: ['cave', 'mountain', 'rocky_paths', 'tunnels'], rarity: 'common' },
+            { name: "Graveler", pokedexNumber: 75, color: 0xBCAAA4, emoji: "🪨", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['mountain_slopes', 'cave_deep', 'boulder_fields', 'volcanic_rock'], rarity: 'uncommon' },
+            { name: "Golem", pokedexNumber: 76, color: 0xA1887F, emoji: "🗿", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.4, movementType: 'ground', habitat: ['mountain_core', 'volcanic_calderas', 'earthquake_faults', 'ancient_ruins_stone'], rarity: 'rare' },
+            { name: "Ponyta", pokedexNumber: 77, color: 0xFFE082, emoji: "🐎", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 1.0, movementType: 'ground', habitat: ['grassland', 'plains', 'volcanic_ash_fields', 'sunny_routes'], rarity: 'uncommon' },
+            { name: "Rapidash", pokedexNumber: 78, color: 0xFFE082, emoji: "🔥🐎", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.7, movementType: 'ground', habitat: ['plains_vast', 'mountains_fiery', 'legendary_race_tracks'], rarity: 'rare' },
+            { name: "Slowpoke", pokedexNumber: 79, color: 0xFFCDD2, emoji: "❓", baseCatchRate: 0.30, baseFleeRate: 0.10, size: 1.2, movementType: 'ground', habitat: ['water_edge', 'riverbanks', 'lazy_ponds', 'sea_shores_calm'], rarity: 'common' },
+            { name: "Slowbro", pokedexNumber: 80, color: 0xFFCDD2, emoji: "🐚", baseCatchRate: 0.15, baseFleeRate: 0.05, size: 1.6, movementType: 'ground', habitat: ['sea_coasts', 'islands_quiet', 'river_mouths'], rarity: 'uncommon' },
+            { name: "Magnemite", pokedexNumber: 81, color: 0xBDBDBD, emoji: "🔩", baseCatchRate: 0.30, baseFleeRate: 0.15, size: 0.3, movementType: 'floating', flyingHeight: 0.5, habitat: ['power_plant', 'urban_industrial', 'areas_with_strong_magnetic_fields', 'caves_metallic'], rarity: 'common' },
+            { name: "Magneton", pokedexNumber: 82, color: 0xBDBDBD, emoji: "⚙️", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.0, movementType: 'floating', flyingHeight: 1.0, habitat: ['power_plant_core', 'research_labs_high_tech', 'thunderstorm_areas'], rarity: 'uncommon' },
+            { name: "Farfetch'd", pokedexNumber: 83, color: 0xC8E6C9, emoji: "🦆", baseCatchRate: 0.10, baseFleeRate: 0.25, size: 0.8, movementType: 'ground', habitat: ['grassland_with_leeks', 'bamboo_forests', 'routes_secluded'], rarity: 'rare' },
+            { name: "Doduo", pokedexNumber: 84, color: 0xD2B48C, emoji: "🐦", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 1.4, movementType: 'ground', habitat: ['savanna', 'grassland_open', 'plains_wide'], rarity: 'common' },
+            { name: "Dodrio", pokedexNumber: 85, color: 0xD2B48C, emoji: "🦅", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 1.8, movementType: 'ground', habitat: ['savanna_vast', 'mountain_plateaus', 'racing_tracks'], rarity: 'uncommon' },
+            { name: "Seel", pokedexNumber: 86, color: 0xE1F5FE, emoji: "🌊", baseCatchRate: 0.30, baseFleeRate: 0.15, size: 1.1, movementType: 'ground', habitat: ['ocean_cold', 'icebergs', 'seafoam_islands', 'arctic_waters'], rarity: 'common' },
+            { name: "Dewgong", pokedexNumber: 87, color: 0xE1F5FE, emoji: "🌊", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.7, movementType: 'ground', habitat: ['ocean_arctic', 'glacial_waters', 'under_ice_sheets', 'deep_sea_cold'], rarity: 'uncommon' },
+            { name: "Grimer", pokedexNumber: 88, color: 0x9C27B0, emoji: "🦠", baseCatchRate: 0.30, baseFleeRate: 0.15, size: 0.9, movementType: 'ground', habitat: ['urban_polluted', 'sewers', 'abandoned_factories', 'toxic_swamps'], rarity: 'common' },
+            { name: "Muk", pokedexNumber: 89, color: 0x9C27B0, emoji: "☣️", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.2, movementType: 'ground', habitat: ['urban_highly_polluted', 'industrial_waste_sites', 'contaminated_lakes'], rarity: 'uncommon' },
+            { name: "Shellder", pokedexNumber: 90, color: 0xBA68C8, emoji: "🐚", baseCatchRate: 0.30, baseFleeRate: 0.10, size: 0.3, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.05, habitat: ['ocean_floor', 'sea_bed_sandy', 'coral_reefs_edge'], rarity: 'common' },
+            { name: "Cloyster", pokedexNumber: 91, color: 0xBA68C8, emoji: "💎", baseCatchRate: 0.15, baseFleeRate: 0.05, size: 1.5, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.1, habitat: ['ocean_deep_trenches', 'underwater_fortresses', 'icy_sea_caves'], rarity: 'uncommon' },
+            { name: "Gastly", pokedexNumber: 92, color: 0x7B1FA2, emoji: "👻", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 1.3, movementType: 'floating', flyingHeight: 1.0, habitat: ['cave_dark', 'abandoned_houses', 'graveyards', 'foggy_areas_night'], rarity: 'common' },
+            { name: "Haunter", pokedexNumber: 93, color: 0x7B1FA2, emoji: "👻", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 1.6, movementType: 'floating', flyingHeight: 1.2, habitat: ['abandoned_towers', 'cemeteries_ancient', 'shadowy_dimensions'], rarity: 'uncommon' },
+            { name: "Gengar", pokedexNumber: 94, color: 0x6A1B9A, emoji: "😈", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.5, movementType: 'floating', flyingHeight: 0.8, habitat: ['dark_alleys_night', 'cursed_locations', 'shadows_of_cities'], rarity: 'rare' },
+            { name: "Onix", pokedexNumber: 95, color: 0xA1887F, emoji: "🗿", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 8.8, movementType: 'ground', habitat: ['cave_deep_rock', 'mountains_solid', 'underground_tunnels_major'], rarity: 'uncommon' },
+            { name: "Drowzee", pokedexNumber: 96, color: 0xFFCA28, emoji: "😴", baseCatchRate: 0.30, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['grassland_near_urban', 'routes_quiet', 'dream_realms_edge'], rarity: 'common' },
+            { name: "Hypno", pokedexNumber: 97, color: 0xFFCA28, emoji: "🌀", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.6, movementType: 'ground', habitat: ['forest_mysterious', 'abandoned_buildings_creepy', 'places_of_strong_emotions'], rarity: 'uncommon' },
+            { name: "Krabby", pokedexNumber: 98, color: 0xFF7043, emoji: "🦀", baseCatchRate: 0.35, baseFleeRate: 0.20, size: 0.4, movementType: 'ground', habitat: ['beach', 'sea_shore_rocky', 'tidal_pools'], rarity: 'common' },
+            { name: "Kingler", pokedexNumber: 99, color: 0xFF7043, emoji: "🦀", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.3, movementType: 'ground', habitat: ['beach_stormy', 'ocean_floor_near_shore', 'underwater_caves_coastal'], rarity: 'uncommon' },
+            { name: "Voltorb", pokedexNumber: 100, color: 0xF44336, emoji: "💣", baseCatchRate: 0.30, baseFleeRate: 0.25, size: 0.5, movementType: 'ground', habitat: ['power_plant', 'abandoned_labs', 'areas_with_electrical_equipment', 'caves_hidden'], rarity: 'common' },
+            { name: "Electrode", pokedexNumber: 101, color: 0xF44336, emoji: "💥", baseCatchRate: 0.15, baseFleeRate: 0.20, size: 1.2, movementType: 'ground', habitat: ['power_plant_generator_room', 'secret_bases_high_voltage', 'thunder_plains'], rarity: 'uncommon' },
+            { name: "Exeggcute", pokedexNumber: 102, color: 0xFFE0B2, emoji: "🥚", baseCatchRate: 0.20, baseFleeRate: 0.15, size: 0.4, movementType: 'ground', habitat: ['forest_sunny', 'tropical_beaches', 'orchards'], rarity: 'uncommon' },
+            { name: "Exeggutor", pokedexNumber: 103, color: 0x4CAF50, emoji: "🌴", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 2.0, movementType: 'ground', habitat: ['tropical_islands', 'sunny_forests_tall', 'oases'], rarity: 'rare' },
+            { name: "Cubone", pokedexNumber: 104, color: 0xD2B48C, emoji: "🦴", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 0.4, movementType: 'ground', habitat: ['cave_lonely', 'mountain_graveyard', 'deserted_plains'], rarity: 'uncommon' },
+            { name: "Marowak", pokedexNumber: 105, color: 0xD2B48C, emoji: "💀", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['cave_sacred', 'ancestral_grounds', 'volcanic_mountains_ashy'], rarity: 'rare' },
+            { name: "Hitmonlee", pokedexNumber: 106, color: 0xA1887F, emoji: "🦵", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.5, movementType: 'ground', habitat: ['mountain_dojos', 'fighting_gyms', 'remote_training_caves'], rarity: 'rare' },
+            { name: "Hitmonchan", pokedexNumber: 107, color: 0xA1887F, emoji: "🥊", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.4, movementType: 'ground', habitat: ['urban_gyms', 'boxing_rings_hidden', 'training_centers'], rarity: 'rare' },
+            { name: "Lickitung", pokedexNumber: 108, color: 0xFFC0CB, emoji: "👅", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 1.2, movementType: 'ground', habitat: ['grassland_sticky', 'forest_unusual', 'caves_damp'], rarity: 'rare' },
+            { name: "Koffing", pokedexNumber: 109, color: 0x9C27B0, emoji: "💨", baseCatchRate: 0.30, baseFleeRate: 0.20, size: 0.6, movementType: 'floating', flyingHeight: 0.8, habitat: ['urban_polluted_air', 'abandoned_buildings_toxic', 'gas_plants'], rarity: 'common' },
+            { name: "Weezing", pokedexNumber: 110, color: 0x9C27B0, emoji: "☠️", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.2, movementType: 'floating', flyingHeight: 1.0, habitat: ['urban_smog_areas', 'chemical_factories', 'toxic_dumps'], rarity: 'uncommon' },
+            { name: "Rhyhorn", pokedexNumber: 111, color: 0xA1887F, emoji: "🦏", baseCatchRate: 0.25, baseFleeRate: 0.15, size: 1.0, movementType: 'ground', habitat: ['mountain_rocky', 'savanna_rough', 'caves_sturdy'], rarity: 'uncommon' },
+            { name: "Rhydon", pokedexNumber: 112, color: 0xA1887F, emoji: "🦏", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.9, movementType: 'ground', habitat: ['mountain_volcanic', 'deep_caves_lava', 'construction_zones_heavy_duty'], rarity: 'rare' },
+            { name: "Chansey", pokedexNumber: 113, color: 0xFFE4E1, emoji: "🥚", baseCatchRate: 0.08, baseFleeRate: 0.10, size: 1.1, movementType: 'ground', habitat: ['grassland_gentle', 'safari_zone', 'hospitals_pokemon_centers'], rarity: 'rare' }, 
+            { name: "Tangela", pokedexNumber: 114, color: 0x42A5F5, emoji: "덩굴", baseCatchRate: 0.10, baseFleeRate: 0.20, size: 1.0, movementType: 'ground', habitat: ['forest_dense_vines', 'jungles_overgrown', 'mysterious_thickets'], rarity: 'uncommon' },
+            { name: "Kangaskhan", pokedexNumber: 115, color: 0xBCAAA4, emoji: "캥거루", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 2.2, movementType: 'ground', habitat: ['savanna_plains', 'rocky_outbacks', 'safari_zones_parental'], rarity: 'rare' },
+            { name: "Horsea", pokedexNumber: 116, color: 0x90CAF9, emoji: "🌊", baseCatchRate: 0.35, baseFleeRate: 0.20, size: 0.4, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.1, habitat: ['ocean_calm', 'coral_reefs', 'seaweed_beds'], rarity: 'common' },
+            { name: "Seadra", pokedexNumber: 117, color: 0x90CAF9, emoji: "🌊", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.2, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.3, habitat: ['ocean_currents', 'underwater_caves_strong_flow', 'coral_mazes'], rarity: 'uncommon' },
+            { name: "Goldeen", pokedexNumber: 118, color: 0xFFAB91, emoji: "🐠", baseCatchRate: 0.35, baseFleeRate: 0.20, size: 0.6, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.15, habitat: ['rivers_clear', 'ponds_serene', 'lakes_freshwater'], rarity: 'common' },
+            { name: "Seaking", pokedexNumber: 119, color: 0xFFAB91, emoji: "👑🐠", baseCatchRate: 0.15, baseFleeRate: 0.15, size: 1.3, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.4, habitat: ['rivers_upstream', 'waterfalls_base', 'lakes_deep_clear'], rarity: 'uncommon' },
+            { name: "Staryu", pokedexNumber: 120, color: 0xFFD54F, emoji: "⭐", baseCatchRate: 0.35, baseFleeRate: 0.15, size: 0.8, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.1, habitat: ['sea_coasts_night', 'ocean_floor_shining', 'tidal_pools_mysterious'], rarity: 'uncommon' },
+            { name: "Starmie", pokedexNumber: 121, color: 0x9575CD, emoji: "🌟", baseCatchRate: 0.15, baseFleeRate: 0.10, size: 1.1, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.2, habitat: ['ocean_deep_space_like', 'underwater_ruins_ancient', 'areas_of_strong_currents_night'], rarity: 'rare' },
+            { name: "Mr. Mime", pokedexNumber: 122, color: 0xFFC0CB, emoji: "🎭", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 1.3, movementType: 'ground', habitat: ['urban_entertainment_districts', 'theaters', 'invisible_wall_areas'], rarity: 'rare' },
+            { name: "Scyther", pokedexNumber: 123, color: 0x8BC34A, emoji: "🦗", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 1.5, movementType: 'flying', flyingHeight: 2.0, habitat: ['grassland_tall', 'forest_ninja_like', 'bamboo_groves_swift'], rarity: 'rare' },
+            { name: "Jynx", pokedexNumber: 124, color: 0xCE93D8, emoji: "💃", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.4, movementType: 'ground', habitat: ['icy_caves_singing', 'snowy_plains_dancing', 'arctic_theaters'], rarity: 'rare' },
+            { name: "Electabuzz", pokedexNumber: 125, color: 0xFFF59D, emoji: "⚡", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.1, movementType: 'ground', habitat: ['power_plant_active', 'areas_prone_to_blackouts', 'thunderstorm_hotspots'], rarity: 'rare' },
+            { name: "Magmar", pokedexNumber: 126, color: 0xFF9800, emoji: "🔥", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 1.3, movementType: 'ground', habitat: ['volcano_active_crater', 'lava_flows', 'geothermal_vents'], rarity: 'rare' },
+            { name: "Pinsir", pokedexNumber: 127, color: 0xA1887F, emoji: "🐞", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 1.5, movementType: 'ground', habitat: ['forest_deep_trees', 'bug_contests_areas', 'safari_zone_strong'], rarity: 'rare' },
+            { name: "Tauros", pokedexNumber: 128, color: 0xD2B48C, emoji: "🐂", baseCatchRate: 0.10, baseFleeRate: 0.20, size: 1.4, movementType: 'ground', habitat: ['savanna_herds', 'plains_stampeding', 'safari_zone_wild'], rarity: 'rare' },
+            { name: "Magikarp", pokedexNumber: 129, color: 0xFF5959, emoji: "🐠", baseCatchRate: 0.50, baseFleeRate: 0.05, size: 0.9, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.1, habitat: ['water_surface', 'rivers', 'lakes', 'ponds', 'polluted_water', 'any_water_body'], rarity: 'common' },
+            { name: "Gyarados", pokedexNumber: 130, color: 0x6890F0, emoji: "🐉", baseCatchRate: 0.08, baseFleeRate: 0.05, size: 6.5, movementType: 'flying', flyingHeight: 4.5, habitat: ['water_deep', 'ocean', 'large_lakes', 'sky_near_water', 'raging_rivers'], rarity: 'very_rare' },
+            { name: "Lapras", pokedexNumber: 131, color: 0x6890F0, emoji: "🦕", baseCatchRate: 0.08, baseFleeRate: 0.05, size: 2.5, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.8, habitat: ['ocean', 'sea_routes', 'cold_waters', 'ice_flows'], rarity: 'rare' },
+            { name: "Ditto", pokedexNumber: 132, color: 0xD1C4E9, emoji: "🦠", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 0.3, movementType: 'ground', habitat: ['anywhere_transformable', 'caves_mysterious', 'research_labs_genetic'], rarity: 'rare' },
+            { name: "Eevee", pokedexNumber: 133, color: 0xBCAAA4, emoji: "🦊", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 0.3, movementType: 'ground', habitat: ['urban_adaptable', 'grassland_varied', 'forest_near_stones'], rarity: 'rare' },
+            { name: "Vaporeon", pokedexNumber: 134, color: 0x90CAF9, emoji: "💧", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 1.0, movementType: 'ground', habitat: ['water_edge_clear', 'lakes_pristine', 'sea_shores_hidden_coves'], rarity: 'rare' },
+            { name: "Jolteon", pokedexNumber: 135, color: 0xFFF59D, emoji: "⚡", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 0.8, movementType: 'ground', habitat: ['grassland_stormy', 'power_plants_surroundings', 'mountain_peaks_electric'], rarity: 'rare' },
+            { name: "Flareon", pokedexNumber: 136, color: 0xFFB74D, emoji: "🔥", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 0.9, movementType: 'ground', habitat: ['volcanic_areas_warm', 'sunny_plains_hot', 'deserts_fiery'], rarity: 'rare' },
+            { name: "Porygon", pokedexNumber: 137, color: 0xFFAB91, emoji: "💻", baseCatchRate: 0.10, baseFleeRate: 0.05, size: 0.8, movementType: 'floating', flyingHeight: 0.6, habitat: ['cyberspace', 'research_labs_digital', 'game_arcades_virtual'], rarity: 'rare' },
+            { name: "Omanyte", pokedexNumber: 138, color: 0x9FA8DA, emoji: "🐚", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 0.4, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.1, habitat: ['ocean_ancient_seabed', 'fossil_revival_labs', 'aquariums_prehistoric'], rarity: 'rare' },
+            { name: "Omastar", pokedexNumber: 139, color: 0x9FA8DA, emoji: "🦑", baseCatchRate: 0.08, baseFleeRate: 0.05, size: 1.0, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.3, habitat: ['ocean_deep_ancient', 'underwater_caves_fossilized', 'museums_revived'], rarity: 'very_rare' },
+            { name: "Kabuto", pokedexNumber: 140, color: 0xA1887F, emoji: "🛡️", baseCatchRate: 0.10, baseFleeRate: 0.10, size: 0.5, movementType: 'ground', habitat: ['ocean_floor_ancient', 'beaches_fossil_rich', 'labs_paleontology'], rarity: 'rare' },
+            { name: "Kabutops", pokedexNumber: 141, color: 0xA1887F, emoji: "⚔️", baseCatchRate: 0.08, baseFleeRate: 0.05, size: 1.3, movementType: 'ground', habitat: ['ocean_shallows_ancient_predator', 'underwater_canyons_sharp', 'museums_dangerous_exhibit'], rarity: 'very_rare' },
+            { name: "Aerodactyl", pokedexNumber: 142, color: 0xCE93D8, emoji: "🦖", baseCatchRate: 0.08, baseFleeRate: 0.10, size: 1.8, movementType: 'flying', flyingHeight: 3.0, habitat: ['sky_ancient', 'mountain_peaks_prehistoric', 'canyons_fossil_bearing'], rarity: 'very_rare' },
+            { name: "Snorlax", pokedexNumber: 143, color: 0x90A4AE, emoji: "😴", baseCatchRate: 0.05, baseFleeRate: 0.02, size: 2.1, movementType: 'ground', habitat: ['mountain_paths_blocking', 'forest_quiet_sleeping', 'routes_food_heavy'], rarity: 'very_rare' },
+            { name: "Articuno", pokedexNumber: 144, color: 0x98D8D8, emoji: "❄️", baseCatchRate: 0.02, baseFleeRate: 0.10, size: 1.7, movementType: 'flying', flyingHeight: 5.0, habitat: ['sky_high', 'snowy_mountains', 'glacial_caves', 'blizzard_areas'], rarity: 'legendary' },
+            { name: "Zapdos", pokedexNumber: 145, color: 0xFFF590, emoji: "⚡🦅", baseCatchRate: 0.02, baseFleeRate: 0.10, size: 1.6, movementType: 'flying', flyingHeight: 5.5, habitat: ['sky_stormy', 'power_plant_legendary', 'thunderclouds', 'mountain_peaks_electric'], rarity: 'legendary' },
+            { name: "Moltres", pokedexNumber: 146, color: 0xFF9800, emoji: "🔥🦅", baseCatchRate: 0.02, baseFleeRate: 0.10, size: 2.0, movementType: 'flying', flyingHeight: 6.0, habitat: ['sky_volcanic', 'volcano_peak_legendary', 'fiery_mountains', 'areas_of_intense_heat'], rarity: 'legendary' },
+            { name: "Dratini", pokedexNumber: 147, color: 0x81D4FA, emoji: "🐉", baseCatchRate: 0.10, baseFleeRate: 0.15, size: 1.8, movementType: 'floating', flyingHeight: ('WATER_LEVEL_Y' in globalThis ? globalThis.WATER_LEVEL_Y : 0) + 0.2, habitat: ['lakes_deep_underwater', 'waterfalls_hidden_caves', 'dragon_shrines_watery'], rarity: 'rare' },
+            { name: "Dragonair", pokedexNumber: 148, color: 0x81D4FA, emoji: "🐉", baseCatchRate: 0.08, baseFleeRate: 0.10, size: 4.0, movementType: 'floating', flyingHeight: 1.5, habitat: ['lakes_mystical_aurora', 'sea_legendary_weather_controlling', 'sky_near_water_bodies'], rarity: 'very_rare' },
+            { name: "Dragonite", pokedexNumber: 149, color: 0xFFB74D, emoji: "🐲", baseCatchRate: 0.08, baseFleeRate: 0.05, size: 2.2, movementType: 'flying', flyingHeight: 4.0, habitat: ['sky_oceanic_guardian', 'lighthouses_remote', 'sea_storm_centers', 'legendary_islands'], rarity: 'very_rare' },
+            { name: "Mewtwo", pokedexNumber: 150, color: 0xD1C4E9, emoji: "🧬", baseCatchRate: 0.01, baseFleeRate: 0.05, size: 2.0, movementType: 'floating', flyingHeight: 2.5, habitat: ['unknown_lab_origin', 'cerulean_cave_deepest', 'places_of_intense_psychic_energy', 'dimensions_beyond'], rarity: 'legendary' },
+            { name: "Mew", pokedexNumber: 151, color: 0xF8A0E0, emoji: "❓", baseCatchRate: 0.01, baseFleeRate: 0.02, size: 0.4, movementType: 'floating', flyingHeight: 2.0, habitat: ['anywhere_secluded', 'ancient_ruins', 'deep_forests', 'mythical_locations', 'faraway_jungle'], rarity: 'mythical' }
+        ];
+
+        const ITEM_DATA = {
+            SAFARI_BALL: { name: "Safari Ball", id: "SAFARI_BALL", modelColor: 0x8FBC8F, topColor: 0x90EE90, bottomColor: 0x778899, catchRateModifier: 1.5, type: 'ball', rarity: 'uncommon', description: "A special ball for the Safari Zone." }, 
+            POKE_BALL: { name: "Poké Ball", id: "POKE_BALL", modelColor: 0xFF0000, topColor: 0xFF0000, bottomColor: 0xFFFFFF, catchRateModifier: 1, type: 'ball', rarity: 'common', description: "A standard ball for catching Pokémon." },
+            GREAT_BALL: { name: "Great Ball", id: "GREAT_BALL", modelColor: 0x0000FF, topColor: 0x007BFF, bottomColor: 0xFFFFFF, catchRateModifier: 1.5, type: 'ball', rarity: 'uncommon', description: "A good ball with a higher catch rate." },
+            ULTRA_BALL: { name: "Ultra Ball", id: "ULTRA_BALL", modelColor: 0x333333, topColor: 0x222222, bottomColor: 0xFFFF00, catchRateModifier: 2, type: 'ball', rarity: 'rare', description: "A very good ball with a high catch rate." },
+            MASTER_BALL: { name: "Master Ball", id: "MASTER_BALL", modelColor: 0x800080, topColor: 0x8A2BE2, bottomColor: 0xFFC0CB, catchRateModifier: 255, type: 'ball', rarity: 'ultra_rare', description: "The best ball! Catches any Pokémon without fail." }, 
+            BAIT: { name: "Bait", id: "BAIT", modelColor: 0xFFA500, type: 'bait', rarity: 'common', description: "Makes Pokémon less likely to flee, but harder to catch." }
+        };
+        const USABLE_BALL_TYPES_ORDER = ['POKE_BALL', 'GREAT_BALL', 'ULTRA_BALL', 'SAFARI_BALL', 'MASTER_BALL'];
+
+
+        const TOTAL_UNIQUE_POKEMON = POKEMON_DATA.length;
+        const ENCOUNTER_DISTANCE = 12; 
+        const MAX_POKEMON_IN_SCENE = 12; 
+        const POKEMON_SPAWN_RADIUS_MIN = 40; const POKEMON_SPAWN_RADIUS_MAX = 130;
+        const TREE_COUNT = 300; const ROCK_COUNT = 70; const BUSH_COUNT = 120; const GRASS_PATCH_COUNT = 180; 
+        const POKEMON_WANDER_RADIUS = 25; const POKEMON_MOVE_SPEED = 0.04;
+        const POKEMON_MOVE_DECISION_CHANCE = 0.03;
+        
+        const CATCH_MINIGAME_DURATION = 1600; 
+        const CATCH_TARGET_SIZE_MIN = 0.2; const CATCH_TARGET_SIZE_MAX = 0.45; 
+        const CATCH_PERFECT_BONUS = 0.35; const CATCH_GOOD_BONUS = 0.15; const CATCH_OKAY_BONUS = 0.05;
+        const CATCH_MISS_PENALTY = -0.1; 
+
+        const INITIAL_POKE_BALLS = 20; 
+        const FLEE_CHANCE_BASE = 0.1; 
+        const ANGER_FLEE_INCREASE = 0.25; 
+        const BAIT_FLEE_DECREASE = -0.15; 
+        const ANGER_CATCH_BONUS = 0.15; 
+        const BAIT_CATCH_PENALTY = -0.1; 
+        const FLED_COOLDOWN_MS = 7000; 
+
+        let moveForward = false, moveBackward = false, turnLeft = false, turnRight = false;
+        let joystickActive = false, joystickAngle = 0, joystickIntensity = 0;
+        let playerSpeed = 0;
+        const MAX_SPEED = 0.60; const ACCELERATION = 0.020; const DECELERATION = 0.028;
+        const BRAKE_DECELERATION = 0.045; const TURN_SPEED_KEYBOARD = 0.030; const TURN_SPEED_JOYSTICK = 0.038;
+
+        let scene, camera, renderer, playerJeep, ground, waterMesh, skyboxMesh; 
+        let activePokemon = [], environmentalObstacles = [], collectibleItemsInScene = [];
+        let encounteredPokemonData = null; 
+        let encounteredPokemonObject = null; 
+        let gamePaused = false, caughtPokemon = [];
+        let uniquePokemonCaughtCount = 0;
+        
+        let encounterScene, encounterCamera, encounterRenderer, encounterPokemonInstance = null, encounterPokeballModel = null;
+        let encounterLoopAnimationId = null; 
+
+        let currentEncounterState = 'SELECT_ACTION'; 
+        let currentEncounterPokemonMood = 'NORMAL'; 
+        let moodTurnsRemaining = 0; 
+        let lastPlayerAction = null; 
+
+        let miniGameCatchStartTime = 0; 
+        let currentShrinkingCircleSize = 1.0;
+        let currentTargetSize = 0.3;
+        let messageTimeout = null;
+        const pokemonBoxHelper = new THREE.Box3();
+        const jeepBoxHelper = new THREE.Box3(); 
+        const gltfLoader = new THREE.GLTFLoader();
+        let allApiPokemonData = []; 
+        let modelsLoadedSuccessfully = false; 
+
+        let isPokeballThrowingAnimation = false;
+        let pokeballThrowAnimStartTime = 0;
+        const POKEBALL_THROW_ANIM_DURATION = 700; 
+        let isPokemonHitByBallAnim = false;
+        let isPokeballWobblingAnim = false;
+        let wobbleAnimCount = 0;
+        const MAX_WOBBLE_ANIM = 3;
+        const WOBBLE_ANIM_DURATION = 600; 
+        let wobbleAnimStartTime = 0;
+        let throwAccuracyScore = 0; 
+
+        let playerInventory = {};
+        let selectedBallType = 'POKE_BALL'; 
+        const MAX_COLLECTIBLE_ITEMS_IN_SCENE = 20;
+        const COLLECTIBLE_ITEM_SPAWN_RADIUS_MIN = 30;
+        const COLLECTIBLE_ITEM_SPAWN_RADIUS_MAX = 100;
+        const COLLECTIBLE_ITEM_SIZE = 0.7; 
+        const COLLECTIBLE_DETECTION_RADIUS = 2.5;
+        let pokemonFactsCache = {}; 
+        let tutorialShownThisSession = false;
+
+
+        // Tone.js synthesizers
+        let generalSynth, noiseSynth, kickSynth, snareSynth, hiHatSynth, itemCollectSynth;
+
+        // DOM Elements
+        const bottomPanel = document.getElementById('bottom-panel');
+        const messageDisplay = document.getElementById('message-display');
+        const pokedexModal = document.getElementById('pokedex-modal');
+        const pokedexOpenButton = document.getElementById('pokedex-open-button');
+        const pokedexCloseButton = document.getElementById('pokedex-close-button');
+        const pokedexList = document.getElementById('pokedex-list');
+        const pokedexScoreDisplay = document.getElementById('pokedex-score');
+        const joystickContainer = document.getElementById('joystick-container');
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickKnob = document.getElementById('joystick-knob');
+        const encounterInterfaceContainer = document.getElementById('encounter-interface-container');
+        const encounterPokemonCanvas = document.getElementById('encounter-pokemon-canvas');
+        const encounterStatusMessage = document.getElementById('encounter-status-message');
+        const catchCircleArea = document.getElementById('catch-circle-area');
+        const catchTargetCircle = document.getElementById('catch-target-circle');
+        const catchShrinkingCircle = document.getElementById('catch-shrinking-circle');
+        const encounterThrowBallButton = document.getElementById('encounter-throw-ball');
+        const encounterThrowBaitButton = document.getElementById('encounter-throw-bait');
+        const encounterThrowRockButton = document.getElementById('encounter-throw-rock');
+        const encounterRunAwayButton = document.getElementById('encounter-run-away');
+        const throwTimingButton = document.getElementById('throw-timing-button');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const currentBallDisplay = document.getElementById('current-ball-display');
+        const ballNameCountDisplay = document.getElementById('ball-name-count');
+        const prevBallButton = document.getElementById('prev-ball-button');
+        const nextBallButton = document.getElementById('next-ball-button');
+        const encounterTransitionOverlay = document.getElementById('encounter-transition-overlay');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreDisplay = document.getElementById('final-score-display');
+        const restartGameButton = document.getElementById('restart-game-button');
+        const tutorialModal = document.getElementById('tutorial-modal');
+        const tutorialCloseButton = document.getElementById('tutorial-close-button');
+
+
+        async function fetchAllPokemonApiData() {
+            try {
+                const response = await fetch('https://pokemon-3d-api.onrender.com/v1/pokemon');
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+                allApiPokemonData = await response.json();
+                if (!Array.isArray(allApiPokemonData)) {
+                     console.error("API did not return an array:", allApiPokemonData);
+                     throw new Error("Unexpected API data format.");
+                }
+                console.log("Successfully fetched Pokémon API data."); 
+                modelsLoadedSuccessfully = true;
+            } catch (error) {
+                console.error("Error fetching Pokémon API data:", error);
+                modelsLoadedSuccessfully = false; 
+                showMessageForDuration("Failed to load 3D models. Placeholders will be used.", 0); 
+            }
+        }
+        
+        function initializeAudio() {
+            Tone.start(); 
+            generalSynth = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination();
+            noiseSynth = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.005, decay: 0.05, sustain: 0 } }).toDestination();
+            kickSynth = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 10, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4, attackCurve: "exponential" } }).toDestination();
+            snareSynth = new Tone.NoiseSynth({ noise: { type: 'pink', playbackRate: 0.5 }, envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.2 } }).toDestination();
+            hiHatSynth = new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.001, decay: 0.05, release: 0.01 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).toDestination();
+            itemCollectSynth = new Tone.Synth({ oscillator: {type: "triangle8"}, envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.2 } }).toDestination();
+            console.log("Audio initialized");
+        }
+        
+        function playSound(type, note = null, duration = '8n') {
+            if (!generalSynth && type !== 'pokemon_cry' && type !== 'item_collect') { 
+                 console.warn("General audio not initialized, cannot play sound:", type);
+                 return;
+            }
+            try {
+                const now = Tone.now();
+                if (type === 'click' && generalSynth) generalSynth.triggerAttackRelease("C5", "16n", now);
+                else if (type === 'throw' && noiseSynth && generalSynth) { noiseSynth.triggerAttackRelease("8n", now); generalSynth.triggerAttackRelease("G4", "16n", now + 0.01); }
+                else if (type === 'catch_success' && kickSynth && generalSynth) { kickSynth.triggerAttackRelease("C3", "8n", now); generalSynth.triggerAttackRelease("C5", "16n", now + 0.1); generalSynth.triggerAttackRelease("E5", "16n", now + 0.2); generalSynth.triggerAttackRelease("G5", "8n", now + 0.3); generalSynth.triggerAttackRelease("C6", "4n", now + 0.5); }
+                else if (type === 'pokemon_cry' && note) {
+                    const freq = 200 + (note % 3000); 
+                    const crySynth = new Tone.AMSynth({ harmonicity: 1.5 + Math.random() * 0.5, detune: Math.random() * 20 - 10, oscillator: { type: ["sawtooth", "triangle", "square"][Math.floor(Math.random()*3)] }, envelope: { attack: 0.01 + Math.random()*0.02, decay: 0.1 + Math.random()*0.1, sustain: 0.05 + Math.random()*0.1, release: 0.2 + Math.random()*0.1 }, modulation: { type: ["sine", "square"][Math.floor(Math.random()*2)] }, modulationEnvelope: { attack: 0.02 + Math.random()*0.03, decay: 0.2 + Math.random()*0.1, sustain: 0, release: 0.2 } }).toDestination();
+                    crySynth.triggerAttackRelease(freq, `${['8n','4n','2n'][Math.floor(Math.random()*3)]}`, now); 
+                    setTimeout(() => crySynth.dispose(), 700); 
+                }
+                else if (type === 'flee' && noiseSynth && generalSynth) { noiseSynth.triggerAttackRelease("4n", now); generalSynth.triggerAttackRelease("A3", "8n", now + 0.05); generalSynth.triggerAttackRelease("F#3", "8n", now + 0.15); }
+                else if (type === 'rock_hit' && kickSynth && noiseSynth) { kickSynth.triggerAttackRelease("A2", "8n", now); noiseSynth.triggerAttackRelease("16n", now + 0.02); }
+                else if (type === 'bait_eat' && generalSynth) { generalSynth.triggerAttackRelease("C4", "16n", now); generalSynth.triggerAttackRelease("E4", "16n", now + 0.1); }
+                else if (type === 'timing_tick' && hiHatSynth) hiHatSynth.triggerAttackRelease("32n", now, 0.5);
+                else if (type === 'ball_wobble' && generalSynth) generalSynth.triggerAttackRelease("F3", "16n", now, 0.7);
+                else if (type === 'ball_break_free' && kickSynth && noiseSynth) { kickSynth.triggerAttackRelease("G2", "8n", now); noiseSynth.triggerAttackRelease("8n", now + 0.05); }
+                else if (type === 'item_collect' && itemCollectSynth) { itemCollectSynth.triggerAttackRelease("A5", "16n", now); itemCollectSynth.triggerAttackRelease("E6", "16n", now + 0.1); }
+            } catch (err) { console.warn("Tone.js error:", err); }
+        }
+
+        function createPokeballModel(itemKey = 'POKE_BALL') {
+            const ballData = ITEM_DATA[itemKey] || ITEM_DATA.POKE_BALL;
+            const pokeballRadius = 0.25; 
+            const group = new THREE.Group();
+
+            const topMaterial = new THREE.MeshStandardMaterial({ color: ballData.topColor || ballData.modelColor, roughness: 0.5, metalness: 0.2 });
+            const topGeometry = new THREE.SphereGeometry(pokeballRadius, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+            const topMesh = new THREE.Mesh(topGeometry, topMaterial);
+            group.add(topMesh);
+
+            const bottomMaterial = new THREE.MeshStandardMaterial({ color: ballData.bottomColor || 0xffffff, roughness: 0.5, metalness: 0.2 });
+            const bottomGeometry = new THREE.SphereGeometry(pokeballRadius, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+            const bottomMesh = new THREE.Mesh(bottomGeometry, bottomMaterial);
+            group.add(bottomMesh);
+
+            const bandHeight = 0.08; 
+            const bandRadius = pokeballRadius * 1.01; 
+            const bandGeometry = new THREE.TorusGeometry(bandRadius - (bandHeight/2) , bandHeight / 2, 16, 100);
+            const bandMaterial = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3, metalness: 0.1 });
+            const bandMesh = new THREE.Mesh(bandGeometry, bandMaterial);
+            bandMesh.rotation.x = Math.PI / 2; 
+            group.add(bandMesh);
+
+            const buttonOuterRadius = 0.07;
+            const buttonOuterHeight = 0.02;
+            const buttonOuterGeometry = new THREE.CylinderGeometry(buttonOuterRadius, buttonOuterRadius, buttonOuterHeight, 32);
+            const buttonOuterMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const buttonOuterMesh = new THREE.Mesh(buttonOuterGeometry, buttonOuterMaterial);
+            buttonOuterMesh.position.z = pokeballRadius - (buttonOuterHeight/3) ; 
+            buttonOuterMesh.rotation.x = Math.PI / 2;
+            group.add(buttonOuterMesh);
+            
+            const buttonInnerRadius = 0.05;
+            const buttonInnerHeight = 0.025; 
+            const buttonInnerGeometry = new THREE.CylinderGeometry(buttonInnerRadius, buttonInnerRadius, buttonInnerHeight, 32);
+            const buttonInnerMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const buttonInnerMesh = new THREE.Mesh(buttonInnerGeometry, buttonInnerMaterial);
+            buttonInnerMesh.position.z = pokeballRadius - (buttonInnerHeight/3) + 0.005; 
+            buttonInnerMesh.rotation.x = Math.PI / 2;
+            group.add(buttonInnerMesh);
+
+            return group;
+        }
+
+
+        async function init() {
+            loadingOverlay.style.display = 'flex'; 
+            initializeAudio(); 
+            await fetchAllPokemonApiData(); 
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); 
+            scene.fog = new THREE.Fog(0x87CEEB, 80, 280); 
+
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 10, 15);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            setupLighting();
+            createSkybox();
+            createGround();
+            createWaterZone(); 
+            createPlayerJeep();
+            spawnEnvironmentalFeatures();
+            
+            if (modelsLoadedSuccessfully) {
+                showMessageForDuration("Welcome to the Enhanced Safari Zone!", 4000);
+            } else {
+                 showMessageForDuration("Welcome! Models failed to load, using placeholders.", 5000);
+            }
+            resetGameState(); 
+            spawnInitialPokemon(MAX_POKEMON_IN_SCENE); 
+            spawnInitialCollectibleItems(MAX_COLLECTIBLE_ITEMS_IN_SCENE);
+
+
+            setupEventListeners();
+            setupJoystick();
+            
+            loadingOverlay.style.display = 'none'; 
+            if (!tutorialShownThisSession) {
+                tutorialModal.style.display = 'flex';
+                tutorialShownThisSession = true; 
+            }
+            animate();
+        }
+
+        function resetGameState() {
+            playerInventory = {
+                POKE_BALL: INITIAL_POKE_BALLS, 
+                SAFARI_BALL: 5, 
+                GREAT_BALL: 3,
+                ULTRA_BALL: 1,
+                MASTER_BALL: 0,
+                BAIT: 10
+            };
+            selectedBallType = 'POKE_BALL'; 
+            updateCurrentBallDisplay();
+
+
+            caughtPokemon = [];
+            uniquePokemonCaughtCount = 0;
+            updatePokedexScoreDisplay();
+            pokedexList.innerHTML = ''; 
+            pokemonFactsCache = {}; 
+
+            if (activePokemon) { 
+                activePokemon.forEach(p => {
+                    scene.remove(p);
+                    p.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); if (child.material?.isMaterial) child.material.dispose(); else if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); } });
+                });
+                activePokemon = [];
+            }
+            if (collectibleItemsInScene) {
+                collectibleItemsInScene.forEach(item => {
+                    if (item.userData.spotLight) scene.remove(item.userData.spotLight); 
+                    scene.remove(item);
+                    item.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); child.material?.dispose(); }});
+                });
+                collectibleItemsInScene = [];
+            }
+
+            if (playerJeep) {
+                playerJeep.position.set(0,0,0);
+                playerJeep.rotation.y = Math.PI;
+                playerSpeed = 0;
+            }
+            gamePaused = false;
+            gameOverModal.style.display = 'none';
+        }
+        
+        function setupLighting() { 
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); scene.add(ambientLight); 
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2); 
+            directionalLight.position.set(50, 70, 40); directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048; directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5; directionalLight.shadow.camera.far = 250;
+            directionalLight.shadow.camera.left = -150; directionalLight.shadow.camera.right = 150;
+            directionalLight.shadow.camera.top = 150; directionalLight.shadow.camera.bottom = -150;
+            scene.add(directionalLight);
+        }
+        function createSkybox() { 
+             const loader = new THREE.CubeTextureLoader();
+            const texture = loader.load([
+                'https://threejs.org/examples/textures/cube/skyboxsun25deg/px.jpg', 
+                'https://threejs.org/examples/textures/cube/skyboxsun25deg/nx.jpg', 
+                'https://threejs.org/examples/textures/cube/skyboxsun25deg/py.jpg', 
+                'https://threejs.org/examples/textures/cube/skyboxsun25deg/ny.jpg', 
+                'https://threejs.org/examples/textures/cube/skyboxsun25deg/pz.jpg', 
+                'https://threejs.org/examples/textures/cube/skyboxsun25deg/nz.jpg'  
+            ]);
+            scene.background = texture;
+        }
+        function createGround() {
+            const groundTexture = new THREE.TextureLoader().load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg', function(texture) {
+                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                texture.repeat.set(100, 100); 
+                texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            });
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                map: groundTexture, 
+                side: THREE.DoubleSide, 
+                roughness: 0.95, 
+                metalness: 0.05 
+            });
+            const groundGeometry = new THREE.PlaneGeometry(FOREST_AREA_SIZE, FOREST_AREA_SIZE, 50, 50); 
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2; 
+            ground.position.y = 0; 
+            ground.receiveShadow = true; 
+            scene.add(ground);
+         }
+        function createWaterZone() { 
+            const waterGeometry = new THREE.PlaneGeometry(WATER_ZONE_SETTINGS.xMax - WATER_ZONE_SETTINGS.xMin, WATER_ZONE_SETTINGS.zMax - WATER_ZONE_SETTINGS.zMin);
+            const waterMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x42a5f5, 
+                transparent: true, 
+                opacity: 0.70, 
+                roughness: 0.1, 
+                metalness: 0.15,
+                side: THREE.DoubleSide 
+            });
+            waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+            waterMesh.rotation.x = -Math.PI / 2;
+            waterMesh.position.set(
+                (WATER_ZONE_SETTINGS.xMin + WATER_ZONE_SETTINGS.xMax) / 2, 
+                WATER_LEVEL_Y, 
+                (WATER_ZONE_SETTINGS.zMin + WATER_ZONE_SETTINGS.zMax) / 2 
+            );
+            waterMesh.receiveShadow = true; 
+            scene.add(waterMesh);
+        }
+        function createPlayerJeep() { 
+            playerJeep = new THREE.Group();
+            const jeepColor = 0xCF1020; const darkMetalColor = 0x333333; const lightColor = 0xFFFFEE;
+            const jeepBodyMaterial = new THREE.MeshStandardMaterial({ color: jeepColor, roughness: 0.5, metalness: 0.4 });
+            const mainBody = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 3.8), jeepBodyMaterial);
+            mainBody.position.y = 0.5; mainBody.castShadow = true; playerJeep.add(mainBody);
+            const windshieldMaterial = new THREE.MeshStandardMaterial({ color: 0xADDDD, transparent: true, opacity: 0.3, side:THREE.DoubleSide });
+            const windshield = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.8), windshieldMaterial);
+            windshield.position.set(0, 1.3, 1.9); windshield.rotation.x = -0.2; playerJeep.add(windshield);
+            const rollBarMaterial = new THREE.MeshStandardMaterial({ color: darkMetalColor, roughness: 0.4, metalness: 0.6 });
+            const barGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.6, 8); const topBarGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.0, 8);
+            const leftBar = new THREE.Mesh(barGeo, rollBarMaterial); leftBar.position.set(-1.0, 1.3, -0.5); playerJeep.add(leftBar);
+            const rightBar = new THREE.Mesh(barGeo, rollBarMaterial); rightBar.position.set(1.0, 1.3, -0.5); playerJeep.add(rightBar);
+            const topBar = new THREE.Mesh(topBarGeo, rollBarMaterial); topBar.rotation.z = Math.PI / 2; topBar.position.set(0, 1.3 + 1.6/2 - 0.08 , -0.5); playerJeep.add(topBar);
+            const headlightGeo = new THREE.CylinderGeometry(0.2, 0.15, 0.15, 12); const headlightMat = new THREE.MeshStandardMaterial({ color: lightColor, emissive: lightColor, emissiveIntensity: 0.3 });
+            const headlightL = new THREE.Mesh(headlightGeo, headlightMat); headlightL.rotation.x = Math.PI/2; headlightL.position.set(-0.7, 0.6, 1.95); playerJeep.add(headlightL);
+            const headlightR = new THREE.Mesh(headlightGeo, headlightMat); headlightR.rotation.x = Math.PI/2; headlightR.position.set(0.7, 0.6, 1.95); playerJeep.add(headlightR);
+            const taillightGeo = new THREE.BoxGeometry(0.3, 0.15, 0.1); const taillightMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xaa0000, emissiveIntensity: 0.2});
+            const taillightL = new THREE.Mesh(taillightGeo, taillightMat); taillightL.position.set(-0.8, 0.7, -1.9); playerJeep.add(taillightL);
+            const taillightR = new THREE.Mesh(taillightGeo, taillightMat); taillightR.position.set(0.8, 0.7, -1.9); playerJeep.add(taillightR);
+            const spareWheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 16); const spareWheelMat = new THREE.MeshStandardMaterial({ color: darkMetalColor });
+            const spareWheel = new THREE.Mesh(spareWheelGeo, spareWheelMat); spareWheel.rotation.x = Math.PI / 2; spareWheel.position.set(0, 0.8, -2.0); playerJeep.add(spareWheel);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: darkMetalColor, roughness:0.7 }); const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
+            const wheelPositions = [{ x: 1.2, z: 1.2 }, { x: -1.2, z: 1.2 }, { x: 1.2, z: -1.2 }, { x: -1.2, z: -1.2 }];
+            wheelPositions.forEach(pos => { const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial); wheel.rotation.z = Math.PI / 2; wheel.position.set(pos.x, 0.5, pos.z); wheel.castShadow = true; playerJeep.add(wheel); });
+            const character = new THREE.Group(); const skinTone = 0xFFDBAC; const jacketColor = 0x00509E; const capRed = 0xCC0000; const capWhite = 0xFFFFFF; const hairColor = 0x1A1A1A; const backpackColor = 0x556B2F;
+            const headMat = new THREE.MeshStandardMaterial({color: skinTone}); const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), headMat); head.position.y = 0.6; character.add(head);
+            const capMainMat = new THREE.MeshStandardMaterial({color: capRed}); const capMain = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.15, 16, 1, false, 0, Math.PI * 1.8), capMainMat); capMain.position.y = 0.1; capMain.rotation.y = Math.PI; head.add(capMain);
+            const capVisorMat = new THREE.MeshStandardMaterial({color: capRed}); const capVisor = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.05, 0.35), capVisorMat); capVisor.position.set(0, -0.05, 0.25); capVisor.rotation.x = 0.1; capMain.add(capVisor);
+            const capFrontMat = new THREE.MeshStandardMaterial({color: capWhite}); const capFront = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.15), capFrontMat); capFront.position.set(0, 0.01, 0.16); capFront.rotation.x = -0.2; capMain.add(capFront);
+            const hairMat = new THREE.MeshStandardMaterial({color: hairColor}); const hair = new THREE.Mesh(new THREE.SphereGeometry(0.31, 16, 16, 0, Math.PI*2, Math.PI/1.8, Math.PI/2.5), hairMat); hair.position.y = -0.05; hair.rotation.x = Math.PI/8; head.add(hair);
+            const bodyMat = new THREE.MeshStandardMaterial({color: jacketColor}); const bodyAsh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8), bodyMat); bodyAsh.position.y = -0.1; character.add(bodyAsh);
+            const backpackMat = new THREE.MeshStandardMaterial({color: backpackColor}); const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.25), backpackMat); backpack.position.set(0, -0.05, -0.3); character.add(backpack);
+            const armGeom = new THREE.CylinderGeometry(0.1, 0.08, 0.6, 8); const handGeom = new THREE.SphereGeometry(0.1, 8, 8); const handMat = new THREE.MeshStandardMaterial({color: skinTone});
+            const leftArm = new THREE.Mesh(armGeom, bodyMat); leftArm.position.set(-0.35, 0.1, 0.1); leftArm.rotation.z = Math.PI / 3; leftArm.rotation.x = -Math.PI / 6; character.add(leftArm);
+            const leftHand = new THREE.Mesh(handGeom, handMat); leftHand.position.y = -0.35; leftArm.add(leftHand);
+            const rightArm = new THREE.Mesh(armGeom, bodyMat); rightArm.position.set(0.35, 0.1, 0.1); rightArm.rotation.z = -Math.PI / 3; rightArm.rotation.x = -Math.PI / 6; character.add(rightArm);
+            const rightHand = new THREE.Mesh(handGeom, handMat); rightHand.position.y = -0.35; rightArm.add(rightHand);
+            character.position.set(0, 0.8, 0.3); playerJeep.add(character);
+            const jeepSize = new THREE.Vector3(2.3, 1.8 + 0.8, 4.0);
+            playerJeep.userData.boundingBox = new THREE.Box3( new THREE.Vector3(-jeepSize.x / 2, 0, -jeepSize.z / 2), new THREE.Vector3(jeepSize.x / 2, jeepSize.y, jeepSize.z / 2) );
+            playerJeep.rotation.y = Math.PI; 
+            playerJeep.position.set(0,0,0);
+            scene.add(playerJeep);
+        }
+        function createPokemonMesh(pokemonGameData, specificFormName = "Placeholder") { 
+            const group = new THREE.Group();
+            const baseSize = pokemonGameData.size || 1.0; 
+            const sphereMat = new THREE.MeshStandardMaterial({ 
+                color: pokemonGameData.color || 0xaaaaaa, 
+                emissive: pokemonGameData.color || 0xaaaaaa, 
+                emissiveIntensity: 0.1 
+            });
+            const placeholderMesh = new THREE.Mesh(new THREE.SphereGeometry(baseSize * 0.5 * MODEL_WORLD_SIZE_MULTIPLIER, 12, 8), sphereMat); 
+            placeholderMesh.castShadow = true;
+            group.add(placeholderMesh);
+
+            const pokemonBox = new THREE.Box3().setFromObject(group);
+            pokemonBox.expandByScalar(0.2); 
+            
+            const movementType = pokemonGameData.movementType || 'ground';
+            const flyingHeight = pokemonGameData.flyingHeight || DEFAULT_FLYING_HEIGHT;
+            let initialY;
+            const placeholderActualHeight = baseSize * MODEL_WORLD_SIZE_MULTIPLIER;
+
+            if (movementType === 'flying' || movementType === 'floating') {
+                initialY = (placeholderActualHeight / 2) + flyingHeight;
+            } else { 
+                initialY = placeholderActualHeight / 2;
+            }
+            
+            group.userData = { 
+                ...pokemonGameData, 
+                name: specificFormName, 
+                isPokemon: true, 
+                isMoving: false, 
+                moveTarget: new THREE.Vector3(), 
+                spawnPoint: new THREE.Vector3(), 
+                baseSize: baseSize, 
+                actualModelHeight: placeholderActualHeight, 
+                boundingBox: pokemonBox, 
+                isPlaceholder: true,
+                movementType: movementType,
+                flyingHeight: flyingHeight,
+                targetY: initialY 
+            };
+            group.position.y = initialY;
+            return group;
+        }
+        function spawnInitialPokemon(count) { for (let i = 0; i < count; i++) spawnPokemon(true); }
+        function spawnEnvironmentalFeatures() { 
+            environmentalObstacles = [];
+            for (let i = 0; i < TREE_COUNT; i++) spawnTree();
+            for (let i = 0; i < ROCK_COUNT; i++) spawnRock();
+            for (let i = 0; i < BUSH_COUNT; i++) spawnBush();
+            for (let i = 0; i < GRASS_PATCH_COUNT; i++) spawnGrassPatch();
+        }
+        function spawnTree() { const tree = new THREE.Group(); const trunkHeight = Math.random() * 6 + 4; const trunkRadius = Math.random() * 0.5 + 0.3; const trunkMaterial = new THREE.MeshStandardMaterial({ color: Math.random() > 0.5 ? 0x654321 : 0x5C4033, roughness: 0.9 }); const trunk = new THREE.Mesh(new THREE.CylinderGeometry(trunkRadius * 0.7, trunkRadius, trunkHeight, 8), trunkMaterial); trunk.castShadow = true; trunk.receiveShadow = true; trunk.position.y = trunkHeight / 2; tree.add(trunk); const foliageRadius = trunkRadius * (Math.random() * 2.5 + 3.5); const foliageColors = [0x2E8B57, 0x3CB371, 0x228B22]; const foliageMaterial = new THREE.MeshStandardMaterial({ color: foliageColors[Math.floor(Math.random() * foliageColors.length)], roughness: 0.8 }); const foliage = new THREE.Mesh(new THREE.SphereGeometry(foliageRadius, 7, 5), foliageMaterial); foliage.position.y = trunkHeight + foliageRadius * 0.5; foliage.castShadow = true; foliage.receiveShadow = true; tree.add(foliage); tree.position.set((Math.random() - 0.5) * FOREST_AREA_SIZE, 0, (Math.random() - 0.5) * FOREST_AREA_SIZE); if (playerJeep && tree.position.distanceTo(playerJeep.position) < 15) { tree.position.x += (tree.position.x > 0 ? 1 : -1) * 20; tree.position.z += (tree.position.z > 0 ? 1 : -1) * 20; } scene.add(tree); const treeBoxSize = new THREE.Vector3(trunkRadius * 2.5, trunkHeight + foliageRadius, trunkRadius * 2.5); const treeBoundingBox = new THREE.Box3().setFromCenterAndSize( new THREE.Vector3(tree.position.x, treeBoxSize.y / 2, tree.position.z), treeBoxSize ); environmentalObstacles.push({ object: tree, boundingBox: treeBoundingBox, type: 'tree' }); }
+        function spawnRock() { const rockSizeBase = Math.random() * 1.8 + 0.8; const rockGeometry = new THREE.DodecahedronGeometry(rockSizeBase, Math.floor(Math.random()*2)); const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.85, metalness: 0.05 }); const rock = new THREE.Mesh(rockGeometry, rockMaterial); rock.position.set( (Math.random() - 0.5) * FOREST_AREA_SIZE, rockSizeBase * 0.4, (Math.random() - 0.5) * FOREST_AREA_SIZE ); rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI); rock.castShadow = true; rock.receiveShadow = true; scene.add(rock); const rockBoxSize = new THREE.Vector3(rockSizeBase*1.5, rockSizeBase*1.2, rockSizeBase*1.5); const rockBoundingBox = new THREE.Box3().setFromCenterAndSize( new THREE.Vector3(rock.position.x, rockBoxSize.y / 2, rock.position.z), rockBoxSize ); environmentalObstacles.push({ object: rock, boundingBox: rockBoundingBox, type: 'rock' }); }
+        function spawnBush() { const bushGroup = new THREE.Group(); const numSpheres = Math.floor(Math.random() * 4) + 3; const baseBushRadius = 0.8 + Math.random() * 0.7; const bushColors = [0x556B2F, 0x6B8E23, 0x8FBC8F]; for (let i = 0; i < numSpheres; i++) { const sphereRadius = baseBushRadius * (0.4 + Math.random() * 0.3); const sphereGeom = new THREE.SphereGeometry(sphereRadius, 5, 4); const sphereMat = new THREE.MeshStandardMaterial({ color: bushColors[Math.floor(Math.random()*bushColors.length)], roughness: 0.9 }); const sphere = new THREE.Mesh(sphereGeom, sphereMat); sphere.position.set( (Math.random() - 0.5) * baseBushRadius * 0.8, sphereRadius * 0.5 + (Math.random() - 0.5) * baseBushRadius * 0.2, (Math.random() - 0.5) * baseBushRadius * 0.8 ); sphere.castShadow = true; bushGroup.add(sphere); } bushGroup.position.set((Math.random() - 0.5) * FOREST_AREA_SIZE, 0, (Math.random() - 0.5) * FOREST_AREA_SIZE); scene.add(bushGroup); }
+        function spawnGrassPatch() { const patchGroup = new THREE.Group(); const numBlades = Math.floor(Math.random() * 10) + 5; const grassColors = [0x90EE90, 0x98FB98, 0x7FFF00]; for (let i = 0; i < numBlades; i++) { const bladeHeight = 0.5 + Math.random() * 0.5; const bladeWidth = 0.05 + Math.random() * 0.05; const bladeGeom = new THREE.PlaneGeometry(bladeWidth, bladeHeight); const bladeMat = new THREE.MeshStandardMaterial({ color: grassColors[Math.floor(Math.random()*grassColors.length)], side: THREE.DoubleSide, transparent: true, alphaTest: 0.1 }); const blade = new THREE.Mesh(bladeGeom, bladeMat); blade.position.set( (Math.random() - 0.5) * 0.7, bladeHeight / 2, (Math.random() - 0.5) * 0.7 ); blade.rotation.y = Math.random() * Math.PI; blade.rotation.x = (Math.random() - 0.5) * 0.2; patchGroup.add(blade); } patchGroup.position.set((Math.random() - 0.5) * FOREST_AREA_SIZE, 0, (Math.random() - 0.5) * FOREST_AREA_SIZE); scene.add(patchGroup); }
+
+
+        function setupEventListeners() { 
+            document.addEventListener('keydown', onKeyDown, false); 
+            document.addEventListener('keyup', onKeyUp, false); 
+            renderer.domElement.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false }); 
+            pokedexOpenButton.addEventListener('click', () => { playSound('click'); pokedexModal.style.display = 'flex'; }); 
+            pokedexCloseButton.addEventListener('click', () => { playSound('click'); pokedexModal.style.display = 'none'; }); 
+            tutorialCloseButton.addEventListener('click', () => { playSound('click'); tutorialModal.style.display = 'none'; });
+            
+            encounterThrowBallButton.addEventListener('click', () => handleEncounterAction('BALL'));
+            encounterThrowBaitButton.addEventListener('click', () => handleEncounterAction('BAIT'));
+            encounterThrowRockButton.addEventListener('click', () => handleEncounterAction('ROCK'));
+            encounterRunAwayButton.addEventListener('click', () => handleEncounterAction('RUN'));
+            throwTimingButton.addEventListener('click', handleThrowTimingInput);
+            restartGameButton.addEventListener('click', () => { playSound('click'); gameOverModal.style.display = 'none'; resetGameState(); spawnInitialPokemon(MAX_POKEMON_IN_SCENE); spawnInitialCollectibleItems(MAX_COLLECTIBLE_ITEMS_IN_SCENE); });
+            prevBallButton.addEventListener('click', (e) => { e.stopPropagation(); selectNextBallType(-1); });
+            nextBallButton.addEventListener('click', (e) => { e.stopPropagation(); selectNextBallType(1); });
+
+
+            window.addEventListener('resize', onWindowResize, false); 
+        }
+        function setupJoystick() { 
+            const baseRect = joystickBase.getBoundingClientRect(); const knobRadius = joystickKnob.offsetWidth / 2; const baseRadius = joystickBase.offsetWidth / 2; const maxDisplacement = baseRadius - knobRadius; let touchId = null; joystickContainer.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { touchId = e.touches[0].identifier; joystickActive = true; joystickKnob.style.cursor = 'grabbing'; updateJoystickPosition(e.touches[0]); } }, { passive: false }); joystickContainer.addEventListener('touchmove', (e) => { if (joystickActive) { for (let i = 0; i < e.touches.length; i++) { if (e.touches[i].identifier === touchId) { updateJoystickPosition(e.touches[i]); break; } } } }, { passive: false }); const onTouchEnd = (e) => { let touchStillActive = false; if (touchId !== null) { for (let i = 0; i < e.touches.length; i++) { if (e.touches[i].identifier === touchId) { touchStillActive = true; break; } } } if (!touchStillActive || e.touches.length === 0) { joystickActive = false; joystickIntensity = 0; joystickKnob.style.left = '50%'; joystickKnob.style.top = '50%'; joystickKnob.style.cursor = 'grab'; touchId = null; } }; joystickContainer.addEventListener('touchend', onTouchEnd); joystickContainer.addEventListener('touchcancel', onTouchEnd); function updateJoystickPosition(touch) { const x = touch.clientX - baseRect.left - baseRadius; const y = touch.clientY - baseRect.top - baseRadius; const distance = Math.min(maxDisplacement, Math.sqrt(x * x + y * y)); joystickAngle = Math.atan2(y, x); joystickIntensity = distance / maxDisplacement; const knobX = Math.cos(joystickAngle) * distance + baseRadius - knobRadius; const knobY = Math.sin(joystickAngle) * distance + baseRadius - knobRadius; joystickKnob.style.left = `${knobX}px`; joystickKnob.style.top = `${knobY}px`; }
+        }
+
+        function onKeyDown(event) { if (gamePaused || currentEncounterState !== 'SELECT_ACTION') return; switch (event.key.toLowerCase()) { case 'w': moveForward = true; break; case 's': moveBackward = true; break; case 'a': turnLeft = true; break; case 'd': turnRight = true; break; } }
+        function onKeyUp(event) { switch (event.key.toLowerCase()) { case 'w': moveForward = false; break; case 's': moveBackward = false; break; case 'a': turnLeft = false; break; case 'd': turnRight = false; break; } }
+
+        function updatePlayerJeep() { 
+            let targetSpeed = 0; let currentTurnSpeed = 0;
+            if (joystickActive && joystickIntensity > 0.1) { const forwardComponent = -Math.sin(joystickAngle) * joystickIntensity; const turnComponent = Math.cos(joystickAngle) * joystickIntensity; if (forwardComponent > 0.1) { targetSpeed = MAX_SPEED * forwardComponent; } else if (forwardComponent < -0.1) { targetSpeed = (MAX_SPEED / 1.5) * forwardComponent; } if (Math.abs(targetSpeed) > 0.05) { currentTurnSpeed = -TURN_SPEED_JOYSTICK * turnComponent; }
+            } else { if (moveForward) { targetSpeed = MAX_SPEED; } else if (moveBackward) { targetSpeed = -MAX_SPEED / 1.5; } if (turnLeft) currentTurnSpeed = TURN_SPEED_KEYBOARD; else if (turnRight) currentTurnSpeed = -TURN_SPEED_KEYBOARD; }
+            if (playerSpeed < targetSpeed) playerSpeed = Math.min(targetSpeed, playerSpeed + ACCELERATION);
+            else if (playerSpeed > targetSpeed) playerSpeed = Math.max(targetSpeed, playerSpeed - ( (targetSpeed < playerSpeed && moveBackward) || (targetSpeed > playerSpeed && moveForward) ? BRAKE_DECELERATION : DECELERATION) );
+            const prevPosition = playerJeep.position.clone();
+            if (Math.abs(playerSpeed) > 0.01) { playerJeep.rotation.y += currentTurnSpeed; }
+            
+            const moveDirection = new THREE.Vector3(0, 0, 1); 
+            moveDirection.applyQuaternion(playerJeep.quaternion);
+            const potentialPosition = playerJeep.position.clone().addScaledVector(moveDirection, playerSpeed);
+
+            let collisionDetected = false;
+            if (playerJeep.userData.boundingBox) {
+                const playerWorldBox = playerJeep.userData.boundingBox.clone().translate(potentialPosition);
+                for (const obstacle of environmentalObstacles) { if (obstacle.boundingBox && playerWorldBox.intersectsBox(obstacle.boundingBox)) { collisionDetected = true; break; } }
+                if (!collisionDetected) { for (const pokemon of activePokemon) { if (pokemon === encounteredPokemonObject && currentEncounterState !== 'SELECT_ACTION') continue; if (pokemon.userData.boundingBox) { pokemonBoxHelper.copy(pokemon.userData.boundingBox).translate(pokemon.position); if (playerWorldBox.intersectsBox(pokemonBoxHelper)) { collisionDetected = true; break; } } } }
+            }
+            if (!collisionDetected) { playerJeep.position.copy(potentialPosition); } else { playerJeep.position.copy(prevPosition); playerSpeed = 0; }
+            playerJeep.position.y = 0; 
+            
+            const cameraOffset = new THREE.Vector3(0, 7, -14); 
+            const cameraLookAtOffset = new THREE.Vector3(0, 2.5, 10); 
+            
+            const cameraPosition = cameraOffset.clone().applyMatrix4(playerJeep.matrixWorld);
+            const lookAtPosition = cameraLookAtOffset.clone().applyMatrix4(playerJeep.matrixWorld);
+            camera.position.lerp(cameraPosition, 0.1);
+            camera.lookAt(lookAtPosition);
+
+            if (playerJeep.userData.boundingBox) {
+                jeepBoxHelper.copy(playerJeep.userData.boundingBox).translate(playerJeep.position);
+                for (let i = collectibleItemsInScene.length - 1; i >= 0; i--) {
+                    const item = collectibleItemsInScene[i];
+                    if (item.userData.boundingBox && jeepBoxHelper.intersectsBox(item.userData.boundingBox)) {
+                        collectItem(item, i);
+                    }
+                }
+            }
+        }
+        function updatePokemonMovements() { 
+            activePokemon.forEach(pokemon => {
+                if (pokemon.userData.boundingBox && !pokemon.userData.isPlaceholder) {
+                   pokemon.updateMatrixWorld(); 
+                }
+                if (!pokemon.userData.isMoving) {
+                    if (Math.random() < POKEMON_MOVE_DECISION_CHANCE) {
+                        pokemon.userData.isMoving = true;
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = Math.random() * POKEMON_WANDER_RADIUS + POKEMON_WANDER_RADIUS * 0.5;
+                        
+                        let targetX = pokemon.userData.spawnPoint.x + Math.cos(angle) * distance;
+                        let targetZ = pokemon.userData.spawnPoint.z + Math.sin(angle) * distance;
+                        const targetY = pokemon.userData.targetY; 
+
+                        if (pokemon.userData.movementType !== 'flying' && pokemon.userData.movementType !== 'sky_low' && pokemon.userData.movementType !== 'sky_high') {
+                            if (pokemon.userData.habitat && pokemon.userData.habitat.some(h => h.includes('water'))) { 
+                                targetX = Math.max(WATER_ZONE_SETTINGS.xMin + 5, Math.min(WATER_ZONE_SETTINGS.xMax - 5, targetX));
+                                targetZ = Math.max(WATER_ZONE_SETTINGS.zMin + 5, Math.min(WATER_ZONE_SETTINGS.zMax - 5, targetZ));
+                            } else {
+                                if (targetZ >= WATER_ZONE_SETTINGS.zMin && targetZ <= WATER_ZONE_SETTINGS.zMax &&
+                                    targetX >= WATER_ZONE_SETTINGS.xMin && targetX <= WATER_ZONE_SETTINGS.xMax) {
+                                     if (targetZ < (WATER_ZONE_SETTINGS.zMax - 5)) { 
+                                        targetZ = WATER_ZONE_SETTINGS.zMax + Math.random() * 5 + 5; 
+                                     }
+                                }
+                                targetX = Math.max(-FOREST_AREA_SIZE/2 + 5, Math.min(FOREST_AREA_SIZE/2 - 5, targetX));
+                                targetZ = Math.max(-FOREST_AREA_SIZE/2 + 5, Math.min(FOREST_AREA_SIZE/2 - 5, targetZ));
+                            }
+                        } else { 
+                            targetX = Math.max(-FOREST_AREA_SIZE/2 + 5, Math.min(FOREST_AREA_SIZE/2 - 5, targetX));
+                            targetZ = Math.max(-FOREST_AREA_SIZE/2 + 5, Math.min(FOREST_AREA_SIZE/2 - 5, targetZ));
+                        }
+                        pokemon.userData.moveTarget.set(targetX, targetY, targetZ);
+                    }
+                } else {
+                    const direction = new THREE.Vector3().subVectors(pokemon.userData.moveTarget, pokemon.position);
+                    const distanceToTarget = direction.length();
+                    if (distanceToTarget < 0.5) { 
+                        pokemon.userData.isMoving = false; 
+                    } else { 
+                        direction.normalize(); 
+                        pokemon.position.addScaledVector(direction, POKEMON_MOVE_SPEED); 
+                        const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix( new THREE.Matrix4().lookAt(pokemon.position, pokemon.userData.moveTarget, pokemon.up) ); 
+                        pokemon.quaternion.slerp(targetQuaternion, 0.1); 
+                    }
+                }
+                 if (pokemon.userData.targetY !== undefined) {
+                    pokemon.position.y = pokemon.userData.targetY;
+                }
+            });
+        }
+        function getWeightedRandomPokemon(pokemonList) { 
+             if (!pokemonList || pokemonList.length === 0) {
+                console.warn("getWeightedRandomPokemon called with empty or null list.");
+                return POKEMON_DATA[Math.floor(Math.random() * POKEMON_DATA.length)]; 
+            }
+
+            let weightedList = [];
+            for (const pokemon of pokemonList) {
+                const weight = RARITY_WEIGHTS[pokemon.rarity] || 1; 
+                for (let i = 0; i < weight; i++) {
+                    weightedList.push(pokemon);
+                }
+            }
+            if (weightedList.length === 0) { 
+                 console.warn("Weighted list for Pokémon selection was empty. Picking random from original suitable list.");
+                 return pokemonList[Math.floor(Math.random() * pokemonList.length)];
+            }
+            const chosen = weightedList[Math.floor(Math.random() * weightedList.length)];
+            return chosen;
+        }
+        function spawnPokemon(initialSpawn = false) { 
+            if (activePokemon.length >= MAX_POKEMON_IN_SCENE) return;
+            
+            let spawnX, spawnZ;
+            const angle = Math.random() * Math.PI * 2;
+            const radius = POKEMON_SPAWN_RADIUS_MIN + Math.random() * (POKEMON_SPAWN_RADIUS_MAX - POKEMON_SPAWN_RADIUS_MIN);
+            if (initialSpawn) {
+                spawnX = (Math.random() - 0.5) * (FOREST_AREA_SIZE - 50);
+                spawnZ = (Math.random() - 0.5) * (FOREST_AREA_SIZE - 50);
+            } else {
+                spawnX = playerJeep.position.x + Math.cos(angle) * radius;
+                spawnZ = playerJeep.position.z + Math.sin(angle) * radius;
+            }
+            spawnX = Math.max(-FOREST_AREA_SIZE / 2 + 10, Math.min(FOREST_AREA_SIZE / 2 - 10, spawnX));
+            spawnZ = Math.max(-FOREST_AREA_SIZE / 2 + 10, Math.min(FOREST_AREA_SIZE / 2 - 10, spawnZ));
+
+            let spawnHabitat = 'grassland'; 
+            if (spawnX >= WATER_ZONE_SETTINGS.xMin && spawnX <= WATER_ZONE_SETTINGS.xMax &&
+                spawnZ >= WATER_ZONE_SETTINGS.zMin && spawnZ <= WATER_ZONE_SETTINGS.zMax) {
+                spawnHabitat = 'water_surface'; 
+            } else if (spawnZ > WATER_ZONE_SETTINGS.zMax && spawnZ < WATER_ZONE_SETTINGS.zMax + 20 && 
+                       spawnX >= WATER_ZONE_SETTINGS.xMin && spawnX <= WATER_ZONE_SETTINGS.xMax) { 
+                 spawnHabitat = 'water_edge';
+            }
+
+            let suitablePokemonForHabitat = POKEMON_DATA.filter(p => {
+                if (!p.habitat) return false; 
+                const habitats = Array.isArray(p.habitat) ? p.habitat : [p.habitat]; 
+
+                if ((p.movementType === 'flying' || p.movementType === 'floating') && (habitats.includes('sky_low') || habitats.includes('sky_high'))) {
+                    if (spawnHabitat !== 'cave') return true; 
+                }
+                if (habitats.includes(spawnHabitat)) return true; 
+                if (habitats.includes('any_land') && (spawnHabitat === 'grassland' || spawnHabitat === 'forest' || spawnHabitat === 'mountain' || spawnHabitat === 'urban' || spawnHabitat === 'cave' || spawnHabitat === 'desert' || spawnHabitat === 'water_edge')) return true;
+                if (habitats.includes('any_water') && (spawnHabitat === 'water_surface' || spawnHabitat === 'water_deep' || spawnHabitat === 'water_edge')) return true;
+                if ((habitats.includes('water_surface') || habitats.includes('water_deep')) && spawnHabitat === 'water_edge') return true;
+                return false;
+            });
+
+            if (suitablePokemonForHabitat.length === 0) {
+                console.warn(`No suitable Pokémon found for habitat: ${spawnHabitat}. Attempting fallback to grassland/forest/any_land.`);
+                suitablePokemonForHabitat = POKEMON_DATA.filter(p => p.habitat === 'grassland' || p.habitat === 'forest' || p.habitat === 'any_land');
+                 if (suitablePokemonForHabitat.length === 0) {
+                    console.error("No fallback Pokémon available. Check POKEMON_DATA habitats. Spawning any Pokémon.");
+                    suitablePokemonForHabitat = POKEMON_DATA; 
+                     if (suitablePokemonForHabitat.length === 0) {
+                        console.error("CRITICAL: POKEMON_DATA is empty. Cannot spawn.");
+                        return;
+                     }
+                 }
+            }
+            
+            const gamePokemonData = getWeightedRandomPokemon(suitablePokemonForHabitat);
+            if (!gamePokemonData) {
+                console.error("Could not select Pokémon after filtering and weighting.");
+                return;
+            }
+            if (typeof gamePokemonData.baseFleeRate === 'undefined') {
+                gamePokemonData.baseFleeRate = FLEE_CHANCE_BASE; 
+            }
+
+            const apiPokemonBase = allApiPokemonData.find(p => p.id === gamePokemonData.pokedexNumber);
+            let modelFileUrl = null; 
+            let selectedFormName = gamePokemonData.name; 
+            let selectedForm = null;
+            const currentMovementType = gamePokemonData.movementType || 'ground';
+            const currentFlyingHeight = gamePokemonData.flyingHeight || DEFAULT_FLYING_HEIGHT;
+
+            if (apiPokemonBase && apiPokemonBase.forms && apiPokemonBase.forms.length > 0) {
+                selectedForm = apiPokemonBase.forms.find(form => form.formName && form.formName.toLowerCase() === 'regular');
+                if (!selectedForm) { 
+                    selectedForm = apiPokemonBase.forms.find(form => form.name && form.name.toLowerCase().includes(gamePokemonData.name.toLowerCase()) && (!form.formName || !form.formName.toLowerCase().includes('shiny')));
+                }
+                if (!selectedForm) { 
+                    selectedForm = apiPokemonBase.forms[0];
+                }
+
+                if (selectedForm && selectedForm.model) {
+                    modelFileUrl = selectedForm.model;
+                    if (modelFileUrl.includes("/models/opt/")) {
+                        modelFileUrl = modelFileUrl.replace("/models/opt/", "/models/glb/"); 
+                    }
+                    selectedFormName = selectedForm.name || gamePokemonData.name;
+                }
+            }
+
+            if (modelFileUrl && modelsLoadedSuccessfully) {
+                gltfLoader.load(
+                    modelFileUrl,
+                    function (gltf) { 
+                        const loadedModel = gltf.scene;
+                        const rawBox = new THREE.Box3().setFromObject(loadedModel);
+                        const rawSize = new THREE.Vector3();
+                        rawBox.getSize(rawSize);
+                        
+                        const targetGameSize = (gamePokemonData.size || 1.0) * MODEL_WORLD_SIZE_MULTIPLIER;
+                        let scaleFactor = 1.0;
+
+                        if (rawSize.y > 0.01) { scaleFactor = targetGameSize / rawSize.y;
+                        } else if (rawSize.x > 0.01) { scaleFactor = targetGameSize / rawSize.x;
+                        } else if (rawSize.z > 0.01) { scaleFactor = targetGameSize / rawSize.z;
+                        } else { scaleFactor = targetGameSize; }
+                        
+                        loadedModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                        
+                        const scaledBox = new THREE.Box3().setFromObject(loadedModel);
+                        const finalModelHeight = scaledBox.max.y - scaledBox.min.y;
+                        
+                        let posY;
+                        if (currentMovementType === 'flying' || currentMovementType === 'floating') {
+                            posY = (finalModelHeight / 2) + currentFlyingHeight;
+                            if (spawnHabitat === 'water_surface' || spawnHabitat === 'water_deep') { 
+                                posY = Math.max(posY, WATER_LEVEL_Y + (finalModelHeight / 2) + 0.5); 
+                            }
+                        } else if (spawnHabitat === 'water_surface' || spawnHabitat === 'water_deep') {
+                            posY = WATER_LEVEL_Y + (finalModelHeight * 0.3); 
+                        }
+                        else { posY = finalModelHeight / 2; }
+                        
+                        loadedModel.position.set(spawnX, posY, spawnZ);
+                        
+                        const finalBoundingBox = new THREE.Box3().setFromObject(loadedModel); 
+                        finalBoundingBox.expandByScalar(0.3); 
+                        
+                        loadedModel.userData = { 
+                            ...gamePokemonData, 
+                            name: selectedFormName, 
+                            apiFormDetails: selectedForm, 
+                            isPokemon: true, isMoving: false, 
+                            moveTarget: new THREE.Vector3(spawnX, posY, spawnZ), 
+                            spawnPoint: loadedModel.position.clone(), 
+                            baseSize: gamePokemonData.size || 1.0, 
+                            actualModelHeight: finalModelHeight, 
+                            boundingBox: finalBoundingBox, 
+                            isPlaceholder: false,
+                            movementType: currentMovementType, 
+                            flyingHeight: currentFlyingHeight, 
+                            targetY: posY 
+                        };
+                        loadedModel.castShadow = true;
+                        loadedModel.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; }});
+                        scene.add(loadedModel);
+                        activePokemon.push(loadedModel);
+                    },
+                    undefined, 
+                    function (errorEvent) { 
+                        let errorDetails = "Unknown GLTF loading error.";
+                        if (errorEvent instanceof ErrorEvent) { errorDetails = `ErrorEvent: ${errorEvent.message || 'No message'}`; if (errorEvent.error) { errorDetails += ` | Underlying error: ${errorEvent.error.message || errorEvent.error.toString()}`; }
+                        } else if (errorEvent instanceof ProgressEvent) { errorDetails = `Network/Progress Error: status ${errorEvent.target?.status || 'N/A'} trying to load ${modelFileUrl}`;
+                        } else if (errorEvent && errorEvent.message) { errorDetails = errorEvent.message;
+                        } else { try { errorDetails = JSON.stringify(errorEvent); } catch (e) { /* ignore */ } }
+                        console.error(`ERROR loading GLB for ${selectedFormName} from ${modelFileUrl}:`, errorDetails);
+                        const placeholder = createPokemonMesh(gamePokemonData, `${gamePokemonData.name} (Model Error)`);
+                        placeholder.position.set(spawnX, placeholder.userData.targetY, spawnZ); 
+                        placeholder.userData.spawnPoint.copy(placeholder.position);
+                        scene.add(placeholder);
+                        activePokemon.push(placeholder);
+                    }
+                );
+            } else { 
+                const placeholderReason = modelsLoadedSuccessfully ? `(No API model for ${gamePokemonData.name})` : `(API Load Failed)`;
+                const placeholder = createPokemonMesh(gamePokemonData, `${gamePokemonData.name} ${placeholderReason}`);
+                placeholder.position.set(spawnX, placeholder.userData.targetY, spawnZ); 
+                placeholder.userData.spawnPoint.copy(placeholder.position);
+                scene.add(placeholder);
+                activePokemon.push(placeholder);
+            }
+        }
+        
+        // --- Collectible Item Functions ---
+        function spawnInitialCollectibleItems(count) {
+            for (let i = 0; i < count; i++) {
+                spawnCollectibleItem(true);
+            }
+        }
+
+        function getWeightedRandomItemKey() {
+            const itemRarities = {
+                POKE_BALL: 30,
+                GREAT_BALL: 15,
+                ULTRA_BALL: 5,
+                MASTER_BALL: 1, 
+                SAFARI_BALL: 10, 
+                BAIT: 25
+            };
+            let weightedList = [];
+            for (const itemKey in itemRarities) {
+                if (ITEM_DATA[itemKey]) { 
+                    const weight = itemRarities[itemKey];
+                    for (let i = 0; i < weight; i++) {
+                        weightedList.push(itemKey);
+                    }
+                }
+            }
+            if (weightedList.length === 0) return 'POKE_BALL'; 
+            return weightedList[Math.floor(Math.random() * weightedList.length)];
+        }
+
+        function createCollectibleMesh(itemKey) {
+            const itemDetails = ITEM_DATA[itemKey];
+            if (!itemDetails) return new THREE.Group(); 
+
+            const group = new THREE.Group();
+            let mesh;
+            let materialOptions = { roughness: 0.4, metalness: 0.1, emissive: itemDetails.modelColor, emissiveIntensity: 0.35 }; // Increased emissive for glow
+
+
+            if (itemDetails.type === 'ball') {
+                const ballRadius = COLLECTIBLE_ITEM_SIZE / 2;
+                const topGeo = new THREE.SphereGeometry(ballRadius, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+                const topMat = new THREE.MeshStandardMaterial({ ...materialOptions, color: itemDetails.topColor || itemDetails.modelColor });
+                mesh = new THREE.Mesh(topGeo, topMat);
+                
+                const bottomGeo = new THREE.SphereGeometry(ballRadius, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+                const bottomMat = new THREE.MeshStandardMaterial({ ...materialOptions, color: itemDetails.bottomColor || 0xffffff });
+                const bottomMesh = new THREE.Mesh(bottomGeo, bottomMat);
+                mesh.add(bottomMesh);
+
+                const bandGeo = new THREE.CylinderGeometry(ballRadius * 0.4, ballRadius * 0.4, ballRadius * 1.05, 16);
+                const bandMat = new THREE.MeshStandardMaterial({...materialOptions, color: 0x333333, emissive: 0x111111}); 
+                const bandMesh = new THREE.Mesh(bandGeo, bandMat);
+                bandMesh.rotation.x = Math.PI / 2;
+                mesh.add(bandMesh);
+
+            } else if (itemDetails.type === 'bait') {
+                const baitSize = COLLECTIBLE_ITEM_SIZE * 0.8;
+                mesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(baitSize / 2, 8, 6),
+                    new THREE.MeshStandardMaterial({ ...materialOptions, color: itemDetails.modelColor })
+                );
+            } else { 
+                mesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(COLLECTIBLE_ITEM_SIZE, COLLECTIBLE_ITEM_SIZE, COLLECTIBLE_ITEM_SIZE),
+                    new THREE.MeshStandardMaterial({ ...materialOptions, color: itemDetails.modelColor || 0x999999 })
+                );
+            }
+            mesh.castShadow = true;
+            group.add(mesh);
+            group.position.y = COLLECTIBLE_ITEM_SIZE / 2 + 0.3; // Increased float height
+            
+            const itemBox = new THREE.Box3().setFromObject(group);
+            
+            const spotLight = new THREE.SpotLight(0xffffff, 1.0, 15, Math.PI / 5, 0.4, 1.5); 
+            spotLight.position.set(0, 2.5, 0); 
+            spotLight.target = group; 
+            group.add(spotLight); 
+            group.userData = { itemDetails: itemDetails, isCollectible: true, boundingBox: itemBox, spotLight: spotLight };
+            
+            group.userData.initialY = group.position.y;
+            group.userData.hoverTimeOffset = Math.random() * Math.PI * 2;
+            return group;
+        }
+
+
+        function spawnCollectibleItem(initialSpawn = false) {
+            if (collectibleItemsInScene.length >= MAX_COLLECTIBLE_ITEMS_IN_SCENE) return;
+
+            const itemKey = getWeightedRandomItemKey();
+            const itemObject = createCollectibleMesh(itemKey);
+
+            let spawnX, spawnZ;
+            const angle = Math.random() * Math.PI * 2;
+            const radius = COLLECTIBLE_ITEM_SPAWN_RADIUS_MIN + Math.random() * (COLLECTIBLE_ITEM_SPAWN_RADIUS_MAX - COLLECTIBLE_ITEM_SPAWN_RADIUS_MIN);
+            
+            if (initialSpawn || !playerJeep) { 
+                spawnX = (Math.random() - 0.5) * (FOREST_AREA_SIZE - 20);
+                spawnZ = (Math.random() - 0.5) * (FOREST_AREA_SIZE - 20);
+            } else {
+                spawnX = playerJeep.position.x + Math.cos(angle) * radius;
+                spawnZ = playerJeep.position.z + Math.sin(angle) * radius;
+            }
+
+            spawnX = Math.max(-FOREST_AREA_SIZE / 2 + 5, Math.min(FOREST_AREA_SIZE / 2 - 5, spawnX));
+            spawnZ = Math.max(-FOREST_AREA_SIZE / 2 + 5, Math.min(FOREST_AREA_SIZE / 2 - 5, spawnZ));
+            
+            if (spawnX >= WATER_ZONE_SETTINGS.xMin && spawnX <= WATER_ZONE_SETTINGS.xMax &&
+                spawnZ >= WATER_ZONE_SETTINGS.zMin && spawnZ <= WATER_ZONE_SETTINGS.zMax) {
+                spawnZ = WATER_ZONE_SETTINGS.zMax + 10 + Math.random() * 20; 
+            }
+
+
+            itemObject.position.x = spawnX;
+            itemObject.position.z = spawnZ;
+            itemObject.userData.boundingBox.setFromObject(itemObject); 
+
+
+            scene.add(itemObject);
+            collectibleItemsInScene.push(itemObject);
+        }
+        
+        function collectItem(itemObject, index) {
+            const itemDetails = itemObject.userData.itemDetails;
+            playSound('item_collect');
+            addItemToInventory(itemDetails.id, 1);
+            showMessageForDuration(`Collected ${itemDetails.name}!`, 2000);
+
+            if (itemObject.userData.spotLight) scene.remove(itemObject.userData.spotLight); 
+            scene.remove(itemObject);
+            itemObject.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); child.material?.dispose(); }});
+            collectibleItemsInScene.splice(index, 1);
+
+            setTimeout(() => spawnCollectibleItem(), 500); 
+        }
+
+        function addItemToInventory(itemKey, quantity = 1) {
+            if (!playerInventory[itemKey]) {
+                playerInventory[itemKey] = 0;
+            }
+            playerInventory[itemKey] += quantity;
+            console.log("Inventory:", playerInventory);
+            updateCurrentBallDisplay(); 
+            updateEncounterButtonStates(); 
+        }
+        
+        function updateCurrentBallDisplay() {
+            const ballData = ITEM_DATA[selectedBallType];
+            const count = playerInventory[selectedBallType] || 0;
+            if (ballNameCountDisplay) {
+                 ballNameCountDisplay.textContent = `${ballData.name} (${count})`;
+            }
+            if (encounterThrowBallButton && ballData) {
+                encounterThrowBallButton.style.backgroundColor = `#${(ballData.topColor || ballData.modelColor).toString(16).padStart(6, '0')}`;
+                const borderColor = (ballData.topColor || ballData.modelColor) > 0x888888 ? '#555555' : '#FFFFFF';
+                encounterThrowBallButton.style.borderColor = borderColor;
+                encounterThrowBallButton.textContent = `THROW ${ballData.name.toUpperCase()}`;
+            }
+        }
+
+        function selectNextBallType(direction) {
+            playSound('click');
+            const currentIndex = USABLE_BALL_TYPES_ORDER.indexOf(selectedBallType);
+            let nextIndex = (currentIndex + direction + USABLE_BALL_TYPES_ORDER.length) % USABLE_BALL_TYPES_ORDER.length;
+            let attempts = 0;
+
+            while (attempts < USABLE_BALL_TYPES_ORDER.length) {
+                const potentialNextBall = USABLE_BALL_TYPES_ORDER[nextIndex];
+                if (playerInventory[potentialNextBall] && playerInventory[potentialNextBall] > 0) {
+                    selectedBallType = potentialNextBall;
+                    updateCurrentBallDisplay();
+                    updateEncounterButtonStates(); 
+                    return;
+                }
+                nextIndex = (nextIndex + direction + USABLE_BALL_TYPES_ORDER.length) % USABLE_BALL_TYPES_ORDER.length;
+                attempts++;
+            }
+            showMessageForDuration("No other available Poké Balls!", 1500);
+        }
+
+
+        // --- End Collectible Item Functions ---
+
+
+        function updateGame() {
+            if (gamePaused && currentEncounterState === 'SELECT_ACTION') { return; } 
+            if (!gamePaused) {
+                updatePlayerJeep(); 
+                updatePokemonMovements();
+                
+                collectibleItemsInScene.forEach(item => {
+                    item.rotation.y += 0.02; 
+                    item.position.y = item.userData.initialY + Math.sin(Date.now() * 0.002 + item.userData.hoverTimeOffset) * 0.15; 
+                    item.userData.boundingBox.setFromObject(item); 
+                });
+            }
+            
+            if (currentEncounterState === 'SELECT_ACTION' && !gamePaused) { 
+                const newActivePokemon = [];
+                let encounterTriggeredThisFrame = false;
+                for (let i = activePokemon.length - 1; i >= 0; i--) {
+                    const pokemonObject = activePokemon[i];
+                    if (!pokemonObject || !pokemonObject.position) continue; 
+                    
+                    const distanceToPlayer = playerJeep.position.distanceTo(pokemonObject.position);
+                    if (!encounterTriggeredThisFrame && distanceToPlayer < ENCOUNTER_DISTANCE) {
+                        initiateEncounter(pokemonObject);
+                        encounterTriggeredThisFrame = true; 
+                        newActivePokemon.push(pokemonObject); 
+                    } else if (distanceToPlayer > POKEMON_SPAWN_RADIUS_MAX * 1.8) { 
+                        scene.remove(pokemonObject);
+                        pokemonObject.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); if (child.material?.isMaterial) child.material.dispose(); else if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); } });
+                    } else {
+                        newActivePokemon.push(pokemonObject);
+                    }
+                }
+                activePokemon = newActivePokemon.reverse();
+                if (Math.random() < 0.020 && activePokemon.length < MAX_POKEMON_IN_SCENE) { 
+                    spawnPokemon();
+                }
+                 if (Math.random() < 0.05 && collectibleItemsInScene.length < MAX_COLLECTIBLE_ITEMS_IN_SCENE) { 
+                    spawnCollectibleItem();
+                }
+            }
+        }
+        
+        function showEncounterTransition(onComplete) { 
+            encounterTransitionOverlay.style.opacity = '1';
+            setTimeout(() => {
+                encounterTransitionOverlay.style.opacity = '0';
+                if (onComplete) onComplete();
+            }, 300); 
+        }
+
+        function initiateEncounter(pokemonObject) { 
+            if (gamePaused || currentEncounterState !== 'SELECT_ACTION') return;
+
+            // Check for "Run Away" cooldown
+            if (pokemonObject.userData.fledTimestamp) {
+                if (Date.now() - pokemonObject.userData.fledTimestamp < FLED_COOLDOWN_MS) {
+                    console.log(`Player recently fled from ${pokemonObject.userData.name}. Encounter on cooldown.`);
+                    return; // Skip encounter
+                } else {
+                    delete pokemonObject.userData.fledTimestamp; // Cooldown expired
+                }
+            }
+            
+            showEncounterTransition(() => {
+                gamePaused = true; 
+                playerSpeed = 0;
+                moveForward = moveBackward = turnLeft = turnRight = false; joystickIntensity = 0;
+                
+                encounteredPokemonObject = pokemonObject;
+                encounteredPokemonData = pokemonObject.userData; 
+                
+                playSound('pokemon_cry', encounteredPokemonData.pokedexNumber);
+                updateEncounterStatusMessage(`Wild ${encounteredPokemonData.name} appeared!`);
+                
+                currentEncounterPokemonMood = 'NORMAL';
+                moodTurnsRemaining = 0;
+                currentEncounterState = 'SELECT_ACTION'; 
+                
+                startEncounterInterface();
+                updateEncounterButtonStates(); 
+            });
+        }
+        
+        function startEncounterInterface() { 
+            encounterInterfaceContainer.style.display = 'flex';
+            catchCircleArea.style.display = 'none'; 
+            throwTimingButton.style.display = 'none';
+            updateCurrentBallDisplay(); 
+
+            encounterScene = new THREE.Scene();
+            encounterScene.background = new THREE.Color(0x607D8B); 
+
+            const encounterCanvasContainer = document.getElementById('encounter-pokemon-canvas-container');
+            encounterCamera = new THREE.PerspectiveCamera(50, encounterCanvasContainer.offsetWidth / encounterCanvasContainer.offsetHeight, 0.1, 100);
+            encounterCamera.position.set(0, 1.2, 4.0); 
+            
+
+            if (!encounterRenderer) { 
+                encounterRenderer = new THREE.WebGLRenderer({ canvas: encounterPokemonCanvas, antialias: true, alpha: true });
+                encounterRenderer.setSize(encounterCanvasContainer.offsetWidth, encounterCanvasContainer.offsetHeight);
+                encounterRenderer.setPixelRatio(window.devicePixelRatio);
+            } else { 
+                 encounterRenderer.setSize(encounterCanvasContainer.offsetWidth, encounterCanvasContainer.offsetHeight);
+            }
+
+            const ambientLightEnc = new THREE.AmbientLight(0xffffff, 1.0); 
+            encounterScene.add(ambientLightEnc);
+            const directionalLightEnc = new THREE.DirectionalLight(0xffffff, 0.9); 
+            directionalLightEnc.position.set(2, 5, 4); 
+            encounterScene.add(directionalLightEnc);
+
+            if (encounterPokeballModel) encounterScene.remove(encounterPokeballModel); 
+            encounterPokeballModel = createPokeballModel(selectedBallType); 
+            encounterPokeballModel.position.set(0, 0.5, 3.5); 
+            encounterPokeballModel.visible = false; 
+            encounterScene.add(encounterPokeballModel);
+
+            const gameData = encounteredPokemonData;
+            const apiData = allApiPokemonData.find(p => p.id === gameData.pokedexNumber);
+            let modelToLoadUrl = null;
+
+            if (apiData && apiData.forms && apiData.forms.length > 0) {
+                let formForEncounter = apiData.forms.find(f => f.formName && f.formName.toLowerCase() === 'regular') || 
+                                  apiData.forms.find(f => f.name && f.name.toLowerCase().includes(gameData.name.toLowerCase())  && (!f.formName || !f.formName.toLowerCase().includes('shiny'))) ||
+                                  apiData.forms[0];
+                if (formForEncounter && formForEncounter.model) {
+                    modelToLoadUrl = formForEncounter.model.replace("/models/opt/", "/models/glb/");
+                }
+            }
+            
+            if (encounterPokemonInstance) encounterScene.remove(encounterPokemonInstance); 
+
+            if (modelToLoadUrl && !gameData.isPlaceholder) {
+                gltfLoader.load(modelToLoadUrl, (gltf) => {
+                    encounterPokemonInstance = gltf.scene;
+                    const rawBox = new THREE.Box3().setFromObject(encounterPokemonInstance);
+                    const rawSize = new THREE.Vector3();
+                    rawBox.getSize(rawSize);
+                    
+                    const targetDisplayHeight = 1.8; 
+                    let scale = 1;
+                    if (rawSize.y > 0.01) scale = targetDisplayHeight / rawSize.y;
+                    else if (rawSize.x > 0.01) scale = targetDisplayHeight / rawSize.x; 
+                    else if (rawSize.z > 0.01) scale = targetDisplayHeight / rawSize.z; 
+                    
+                    encounterPokemonInstance.scale.set(scale, scale, scale);
+                    
+                    // Center the model's geometry for proper rotation
+                    const scaledBox = new THREE.Box3().setFromObject(encounterPokemonInstance);
+                    const modelCenter = new THREE.Vector3();
+                    scaledBox.getCenter(modelCenter);
+                    encounterPokemonInstance.children.forEach(child => { // Translate geometry of all meshes within the loaded GLTF scene
+                        if (child.isMesh) {
+                            child.geometry.translate(-modelCenter.x, -modelCenter.y, -modelCenter.z);
+                        }
+                    });
+                    // After translating geometry, the model's visual center is at its local origin (0,0,0).
+                    // Now position the group.
+                    encounterPokemonInstance.position.set(0, 0.6, 0); // Desired base Y position in encounter scene
+                    encounterPokemonInstance.rotation.y = Math.PI; 
+                    encounterScene.add(encounterPokemonInstance);
+                    encounterCamera.lookAt(0, 0.6, 0); // Look at the new centered position
+                }, undefined, (error) => {
+                    console.error("Error loading Pokémon for encounter:", error);
+                    const placeholderGeo = new THREE.SphereGeometry(0.8, 16, 16);
+                    const placeholderMat = new THREE.MeshStandardMaterial({color: gameData.color || 0xcccccc});
+                    encounterPokemonInstance = new THREE.Mesh(placeholderGeo, placeholderMat);
+                    encounterPokemonInstance.position.y = 0.8; 
+                    encounterScene.add(encounterPokemonInstance);
+                    encounterCamera.lookAt(encounterPokemonInstance.position);
+                });
+            } else { 
+                const placeholderGeo = new THREE.SphereGeometry(0.8, 16, 16);
+                const placeholderMat = new THREE.MeshStandardMaterial({color: gameData.color || 0xcccccc});
+                encounterPokemonInstance = new THREE.Mesh(placeholderGeo, placeholderMat);
+                encounterPokemonInstance.position.y = 0.8; 
+                encounterScene.add(encounterPokemonInstance);
+                encounterCamera.lookAt(encounterPokemonInstance.position);
+            }
+            
+            if (encounterLoopAnimationId) cancelAnimationFrame(encounterLoopAnimationId); 
+            renderEncounterLoop();
+        }
+
+        function renderEncounterLoop() { 
+            if (currentEncounterState === 'ENDED') return; 
+            encounterLoopAnimationId = requestAnimationFrame(renderEncounterLoop);
+            
+            const now = performance.now();
+            if (currentEncounterState === 'THROWING_BALL_TIMING') {
+                const elapsedTime = now - miniGameCatchStartTime;
+                const effectiveProgress = (elapsedTime % CATCH_MINIGAME_DURATION) / CATCH_MINIGAME_DURATION;
+                currentShrinkingCircleSize = 1.0 - effectiveProgress; 
+                const maxCircleSizePx = catchCircleArea.offsetWidth;
+                const currentSizePx = currentShrinkingCircleSize * maxCircleSizePx;
+                catchShrinkingCircle.style.width = `${currentSizePx}px`;
+                catchShrinkingCircle.style.height = `${currentSizePx}px`;
+                if(frameCount % 10 == 0) playSound('timing_tick'); 
+            }
+
+            if (isPokeballThrowingAnimation && encounterPokeballModel && encounterPokemonInstance) {
+                const progress = Math.min((now - pokeballThrowAnimStartTime) / POKEBALL_THROW_ANIM_DURATION, 1);
+                const startPos = new THREE.Vector3(0, 0.5, 3.5); 
+                const pokemonCenterY = encounterPokemonInstance.position.y; // Since it's now centered, its group position is its visual center's Y
+                const endPos = new THREE.Vector3(encounterPokemonInstance.position.x, pokemonCenterY, encounterPokemonInstance.position.z);
+                
+                encounterPokeballModel.position.lerpVectors(startPos, endPos, progress);
+                encounterPokeballModel.rotation.x -= 0.25 * progress; 
+
+                if (progress >= 1) {
+                    isPokeballThrowingAnimation = false;
+                    isPokemonHitByBallAnim = true;
+                    if(encounterPokemonInstance) encounterPokemonInstance.visible = false; 
+                    encounterPokeballModel.position.copy(endPos); 
+                    encounterPokeballModel.rotation.set(0,0,0); 
+                    
+                    isPokeballWobblingAnim = true;
+                    wobbleAnimCount = 0;
+                    wobbleAnimStartTime = now;
+                    playSound('ball_wobble');
+                }
+            }
+
+            if (isPokeballWobblingAnim && encounterPokeballModel) {
+                const elapsedTimeSinceWobbleStart = now - wobbleAnimStartTime;
+                const wobbleProgress = (elapsedTimeSinceWobbleStart % WOBBLE_ANIM_DURATION) / WOBBLE_ANIM_DURATION;
+                const angle = Math.sin(wobbleProgress * Math.PI * 2) * (0.3 - wobbleAnimCount * 0.07); 
+                encounterPokeballModel.rotation.z = angle;
+
+                if (elapsedTimeSinceWobbleStart >= WOBBLE_ANIM_DURATION) {
+                    wobbleAnimCount++;
+                    wobbleAnimStartTime = now; 
+                    if (wobbleAnimCount < MAX_WOBBLE_ANIM) playSound('ball_wobble');
+
+                    if (wobbleAnimCount >= MAX_WOBBLE_ANIM) {
+                        isPokeballWobblingAnim = false;
+                        resolveCatchAttempt(throwAccuracyScore); 
+                    }
+                }
+            }
+            
+            if(encounterPokemonInstance && !isPokemonHitByBallAnim) { 
+                 encounterPokemonInstance.rotation.y += 0.005; 
+                 // Hover animation is now simpler as the model is centered at its group's origin (before this Y adjustment)
+                 encounterPokemonInstance.position.y = 0.6 + Math.sin(now * 0.002) * 0.05; // Base Y + hover
+            }
+
+            if(encounterRenderer && encounterScene && encounterCamera) {
+                encounterRenderer.render(encounterScene, encounterCamera);
+            }
+            if (typeof TWEEN !== 'undefined') TWEEN.update(now);
+        }
+
+        function updateEncounterButtonStates() {
+            const hasSelectedBall = playerInventory[selectedBallType] && playerInventory[selectedBallType] > 0;
+            encounterThrowBallButton.disabled = !hasSelectedBall || currentEncounterState !== 'SELECT_ACTION';
+            
+            const hasBait = playerInventory.BAIT && playerInventory.BAIT > 0;
+            encounterThrowBaitButton.disabled = !hasBait || currentEncounterState !== 'SELECT_ACTION';
+            
+            encounterThrowRockButton.disabled = currentEncounterState !== 'SELECT_ACTION';
+            encounterRunAwayButton.disabled = currentEncounterState !== 'SELECT_ACTION';
+        }
+        
+        function handleEncounterAction(action) {
+            if (currentEncounterState !== 'SELECT_ACTION' || !encounteredPokemonData) return;
+            playSound('click');
+            lastPlayerAction = action;
+            updateEncounterButtonStates(); 
+
+            switch(action) {
+                case 'BALL':
+                    if (!playerInventory[selectedBallType] || playerInventory[selectedBallType] <= 0) {
+                        updateEncounterStatusMessage(`Out of ${ITEM_DATA[selectedBallType].name}s!`);
+                        setTimeout(() => { 
+                            currentEncounterState = 'SELECT_ACTION';
+                            updateEncounterButtonStates();
+                            checkGameOver(); 
+                        }, 1500);
+                        return;
+                    }
+                    playerInventory[selectedBallType]--;
+                    updateCurrentBallDisplay();
+                    playSound('throw');
+                    currentEncounterState = 'THROWING_BALL_TIMING';
+                    catchCircleArea.style.display = 'block';
+                    throwTimingButton.style.display = 'block';
+                    const maxCircleSizePx = catchCircleArea.offsetWidth;
+                    currentTargetSize = CATCH_TARGET_SIZE_MIN + Math.random() * (CATCH_TARGET_SIZE_MAX - CATCH_TARGET_SIZE_MIN);
+                    const targetSizePx = currentTargetSize * maxCircleSizePx;
+                    catchTargetCircle.style.width = `${targetSizePx}px`; catchTargetCircle.style.height = `${targetSizePx}px`;
+                    miniGameCatchStartTime = performance.now();
+                    updateEncounterStatusMessage("Time your throw!");
+                    if(encounterPokeballModel) encounterScene.remove(encounterPokeballModel);
+                    encounterPokeballModel = createPokeballModel(selectedBallType);
+                    encounterPokeballModel.position.set(0, 0.5, 3.5);
+                    encounterPokeballModel.visible = false; 
+                    encounterScene.add(encounterPokeballModel);
+                    break;
+                case 'BAIT':
+                     if (!playerInventory.BAIT || playerInventory.BAIT <= 0) {
+                        updateEncounterStatusMessage("Out of Bait!");
+                         setTimeout(() => {
+                            currentEncounterState = 'SELECT_ACTION';
+                            updateEncounterButtonStates();
+                        }, 1500);
+                        return;
+                    }
+                    playerInventory.BAIT--;
+                    playSound('bait_eat');
+                    currentEncounterPokemonMood = 'EATING';
+                    moodTurnsRemaining = 2 + Math.floor(Math.random() * 2); 
+                    updateEncounterStatusMessage(`${encounteredPokemonData.name} is eating the bait!`);
+                    setTimeout(pokemonTurn, 1500); 
+                    break;
+                case 'ROCK':
+                    playSound('rock_hit');
+                    currentEncounterPokemonMood = 'ANGRY';
+                    moodTurnsRemaining = 2 + Math.floor(Math.random() * 2); 
+                    updateEncounterStatusMessage(`${encounteredPokemonData.name} is angry!`);
+                    setTimeout(pokemonTurn, 1500);
+                    break;
+                case 'RUN':
+                    updateEncounterStatusMessage(`Got away safely!`);
+                    if (encounteredPokemonObject) {
+                        encounteredPokemonObject.userData.fledTimestamp = Date.now(); // Set timestamp
+                    }
+                    setTimeout(() => endEncounter(false), 1000); 
+                    break;
+            }
+             updateEncounterButtonStates(); 
+        }
+
+        function handleThrowTimingInput() { 
+            if (currentEncounterState !== 'THROWING_BALL_TIMING') return;
+            playSound('click');
+            
+            const difference = Math.abs(currentShrinkingCircleSize - currentTargetSize);
+            if (difference < 0.05) { throwAccuracyScore = 1.0; updateEncounterStatusMessage("Perfect throw!"); } 
+            else if (difference < 0.15) { throwAccuracyScore = 0.6; updateEncounterStatusMessage("Good throw!"); } 
+            else if (difference < 0.25) { throwAccuracyScore = 0.3; updateEncounterStatusMessage("Okay throw."); }
+            else { throwAccuracyScore = 0.0; updateEncounterStatusMessage("Missed the timing..."); }
+
+            currentEncounterState = 'POKEBALL_ANIMATION';
+            catchCircleArea.style.display = 'none';
+            throwTimingButton.style.display = 'none';
+            
+            encounterPokeballModel.position.set(0, 0.5, 3.5); 
+            encounterPokeballModel.rotation.set(0,0,0);
+            encounterPokeballModel.visible = true;
+            isPokeballThrowingAnimation = true;
+            pokeballThrowAnimStartTime = performance.now();
+        }
+
+        function resolveCatchAttempt(accuracy) { 
+            if(!encounteredPokemonData) { 
+                endEncounter(false, "An error occurred."); 
+                return; 
+            }
+            
+            let catchRate = encounteredPokemonData.baseCatchRate || 0.1;
+            let ballModifier = ITEM_DATA[selectedBallType] ? ITEM_DATA[selectedBallType].catchRateModifier : 1;
+            catchRate *= ballModifier; 
+
+            let moodCatchModifier = 0;
+            if (currentEncounterPokemonMood === 'ANGRY') moodCatchModifier = ANGER_CATCH_BONUS;
+            if (currentEncounterPokemonMood === 'EATING') moodCatchModifier = BAIT_CATCH_PENALTY;
+
+            let throwBonus = 0;
+            if (accuracy >= 1.0) throwBonus = CATCH_PERFECT_BONUS; 
+            else if (accuracy >= 0.6) throwBonus = CATCH_GOOD_BONUS; 
+            else if (accuracy >= 0.3) throwBonus = CATCH_OKAY_BONUS;
+            else throwBonus = CATCH_MISS_PENALTY;
+            
+            const finalCatchChance = Math.max(0.01, Math.min(0.95, catchRate + moodCatchModifier + throwBonus));
+            const catchRoll = Math.random();
+            
+            console.log(`Catch attempt: BaseRate(${encounteredPokemonData.baseCatchRate}), BallMod(${ballModifier}), MoodMod(${moodCatchModifier}), ThrowBonus(${throwBonus}) -> FinalChance: ${finalCatchChance.toFixed(3)}, Rolled: ${catchRoll.toFixed(3)}`);
+
+            const wasCaught = catchRoll < finalCatchChance;
+            
+            if (wasCaught) {
+                playSound('catch_success');
+                updateEncounterStatusMessage(`Gotcha! ${encounteredPokemonData.name} was caught!`);
+                if(encounterPokeballModel && encounterPokeballModel.children[0] && encounterPokeballModel.children[0].material) { 
+                     const originalColor = encounterPokeballModel.children[0].material.color.getHex(); 
+                     encounterPokeballModel.children[0].material.color.setHex(0x00ff00); 
+                     setTimeout(() => {
+                        if(encounterPokeballModel && encounterPokeballModel.children[0] && encounterPokeballModel.children[0].material) encounterPokeballModel.children[0].material.color.setHex(originalColor);
+                     }, 300);
+                }
+                setTimeout(() => {
+                    addPokemonToPokedex(encounteredPokemonData); 
+                    endEncounter(true); 
+                }, 2000); 
+            } else {
+                playSound('ball_break_free');
+                updateEncounterStatusMessage(`Oh no! ${encounteredPokemonData.name} broke free!`);
+                if(encounterPokeballModel) { 
+                    new TWEEN.Tween(encounterPokeballModel.scale)
+                        .to({ x: 0.1, y: 0.1, z: 0.1 }, 300)
+                        .easing(TWEEN.Easing.Quadratic.Out)
+                        .onComplete(() => { 
+                            if(encounterPokeballModel) encounterPokeballModel.visible = false; 
+                            if(encounterPokemonInstance) encounterPokemonInstance.visible = true;
+                        })
+                        .start();
+                }
+                setTimeout(pokemonTurn, 1500); 
+            }
+        }
+
+        function pokemonTurn() { 
+            if (currentEncounterState === 'ENDED' || !encounteredPokemonData) return;
+            currentEncounterState = 'POKEMON_TURN';
+
+            if (moodTurnsRemaining > 0) {
+                moodTurnsRemaining--;
+                if (moodTurnsRemaining === 0) {
+                    updateEncounterStatusMessage(`${encounteredPokemonData.name} is no longer ${currentEncounterPokemonMood.toLowerCase()}.`);
+                    currentEncounterPokemonMood = 'NORMAL';
+                    setTimeout(checkPokemonFlee, 1000);
+                    return;
+                }
+            }
+            checkPokemonFlee();
+        }
+
+        function checkPokemonFlee() {
+            let fleeRate = (encounteredPokemonData.baseFleeRate || FLEE_CHANCE_BASE);
+            if (currentEncounterPokemonMood === 'ANGRY') fleeRate += ANGER_FLEE_INCREASE;
+            if (currentEncounterPokemonMood === 'EATING') fleeRate += BAIT_FLEE_DECREASE;
+            
+            fleeRate = Math.max(0.01, Math.min(0.9, fleeRate)); 
+
+            if (Math.random() < fleeRate) {
+                playSound('flee');
+                updateEncounterStatusMessage(`Wild ${encounteredPokemonData.name} fled!`);
+                if (encounteredPokemonObject) { 
+                    encounteredPokemonObject.userData.fledTimestamp = Date.now();
+                }
+                setTimeout(() => endEncounter(false), 1500); 
+            } else {
+                let status = `${encounteredPokemonData.name} is watching carefully.`;
+                if(currentEncounterPokemonMood === 'EATING') status = `${encounteredPokemonData.name} is still eating.`;
+                if(currentEncounterPokemonMood === 'ANGRY') status = `${encounteredPokemonData.name} is still angry!`;
+                updateEncounterStatusMessage(status);
+                currentEncounterState = 'SELECT_ACTION';
+                updateEncounterButtonStates();
+                checkGameOver(); 
+            }
+         }
+        
+        function endEncounter(caught) {
+            currentEncounterState = 'ENDED';
+            gamePaused = false; 
+            
+            if (encounterLoopAnimationId) {
+                cancelAnimationFrame(encounterLoopAnimationId);
+                encounterLoopAnimationId = null;
+            }
+            if (encounterPokemonInstance) {
+                if (encounterScene) encounterScene.remove(encounterPokemonInstance);
+                encounterPokemonInstance.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); if (child.material?.isMaterial) child.material.dispose(); else if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); } });
+                encounterPokemonInstance = null;
+            }
+            if (encounterPokeballModel) {
+                if (encounterScene) encounterScene.remove(encounterPokeballModel);
+                encounterPokeballModel.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); child.material?.dispose(); }});
+                encounterPokeballModel = null;
+            }
+            encounterInterfaceContainer.style.display = 'none';
+
+            if (caught && encounteredPokemonObject) {
+                const index = activePokemon.indexOf(encounteredPokemonObject);
+                if (index > -1) activePokemon.splice(index, 1);
+                scene.remove(encounteredPokemonObject);
+                encounteredPokemonObject.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); if (child.material?.isMaterial) child.material.dispose(); else if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); } });
+            }
+            
+            if (caught) { // Only nullify if caught, so flee cooldown works
+                 encounteredPokemonObject = null;
+            }
+            encounteredPokemonData = null;
+            currentEncounterPokemonMood = 'NORMAL';
+            moodTurnsRemaining = 0;
+            isPokeballThrowingAnimation = false;
+            isPokemonHitByBallAnim = false;
+            isPokeballWobblingAnim = false;
+
+            setTimeout(() => { 
+                 currentEncounterState = 'SELECT_ACTION'; 
+                 checkGameOver(); 
+            }, 100);
+         }
+
+        function checkGameOver() {
+            let totalBalls = 0;
+            for (const ballKey of USABLE_BALL_TYPES_ORDER) {
+                totalBalls += (playerInventory[ballKey] || 0);
+            }
+
+            if (totalBalls <= 0 && currentEncounterState === 'SELECT_ACTION' && (!gameOverModal.style.display || gameOverModal.style.display === 'none')) {
+                gamePaused = true; 
+                finalScoreDisplay.textContent = `You caught ${uniquePokemonCaughtCount} unique Pokémon!`;
+                gameOverModal.style.display = 'flex';
+                playSound('flee'); 
+            }
+        }
+
+        function updatePokedexScoreDisplay() { pokedexScoreDisplay.textContent = `Caught: ${uniquePokemonCaughtCount}/${TOTAL_UNIQUE_POKEMON}`; }
+        
+        async function fetchPokemonFunFact(pokemonName, pokedexNumber, factDisplayElement, buttonElement) {
+            if (pokemonFactsCache[pokedexNumber]) {
+                factDisplayElement.textContent = pokemonFactsCache[pokedexNumber];
+                return;
+            }
+
+            factDisplayElement.innerHTML = '<span class="fact-loading-indicator">✨ Fetching a fun fact...</span>';
+            buttonElement.disabled = true;
+
+            const prompt = `Tell me a short, fun, kid-friendly fact about the Pokémon ${pokemonName}. Make it sound like a Pokédex entry.`;
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    factDisplayElement.textContent = text;
+                    pokemonFactsCache[pokedexNumber] = text; 
+                } else {
+                    console.error("Gemini API Error: Unexpected response structure or no content.", result);
+                    factDisplayElement.textContent = "Couldn't fetch a fun fact right now. Try again later!";
+                }
+            } catch (error) {
+                console.error("Gemini API Fetch Error:", error);
+                factDisplayElement.textContent = "Error fetching fact. Check console for details.";
+            } finally {
+                buttonElement.disabled = false; 
+            }
+        }
+
+
+        function addPokemonToPokedex(pokemonData) { 
+             if (!caughtPokemon.some(p => p.pokedexNumber === pokemonData.pokedexNumber)) { 
+                caughtPokemon.push(pokemonData); 
+                uniquePokemonCaughtCount++;
+                updatePokedexScoreDisplay();
+                
+                const listItem = document.createElement('li');
+                
+                const mainInfoDiv = document.createElement('div');
+                mainInfoDiv.className = 'pokemon-main-info';
+
+                const pokemonInfoDiv = document.createElement('div');
+                pokemonInfoDiv.className = 'pokemon-info';
+
+                const emojiSpan = document.createElement('span'); emojiSpan.textContent = pokemonData.emoji; 
+                const nameSpan = document.createElement('span'); nameSpan.textContent = pokemonData.name; 
+                
+                const habitatInfoSpan = document.createElement('span');
+                habitatInfoSpan.className = 'habitat-info';
+                const habitats = Array.isArray(pokemonData.habitat) ? pokemonData.habitat.join(', ') : pokemonData.habitat;
+                habitatInfoSpan.textContent = `Habitat: ${habitats || 'Unknown'}`;
+
+                const nameAndHabitatDiv = document.createElement('div');
+                nameAndHabitatDiv.appendChild(nameSpan);
+                nameAndHabitatDiv.appendChild(habitatInfoSpan);
+
+                pokemonInfoDiv.appendChild(emojiSpan); 
+                pokemonInfoDiv.appendChild(nameAndHabitatDiv);
+                
+                const buttonsDiv = document.createElement('div');
+                const cryButton = document.createElement('button');
+                cryButton.textContent = 'Cry';
+                cryButton.className = 'pokedex-cry-button ui-font';
+                cryButton.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    playSound('pokemon_cry', pokemonData.pokedexNumber); 
+                };
+
+                const factButton = document.createElement('button');
+                factButton.innerHTML = '✨ Fact'; 
+                factButton.className = 'pokedex-fact-button ui-font';
+                
+                buttonsDiv.appendChild(cryButton);
+                buttonsDiv.appendChild(factButton);
+
+                mainInfoDiv.appendChild(pokemonInfoDiv); 
+                mainInfoDiv.appendChild(buttonsDiv);
+
+                const factDisplay = document.createElement('div');
+                factDisplay.className = 'pokemon-fact-display';
+                factDisplay.id = `fact-display-${pokemonData.pokedexNumber}`;
+                factDisplay.textContent = "(Click '✨ Fact' to learn something new!)";
+
+
+                factButton.onclick = (e) => {
+                    e.stopPropagation();
+                    fetchPokemonFunFact(pokemonData.name, pokemonData.pokedexNumber, factDisplay, factButton);
+                };
+
+                listItem.appendChild(mainInfoDiv);
+                listItem.appendChild(factDisplay);
+                pokedexList.appendChild(listItem);
+
+                Array.from(pokedexList.getElementsByTagName('li'))
+                    .sort((a, b) => {
+                        const nameAElement = a.querySelector('.pokemon-info > div > span:first-child');
+                        const nameBElement = b.querySelector('.pokemon-info > div > span:first-child');
+                        const nameA = nameAElement ? nameAElement.textContent : '';
+                        const nameB = nameBElement ? nameBElement.textContent : '';
+
+                        const numA = caughtPokemon.find(p => p.name === nameA)?.pokedexNumber || 0;
+                        const numB = caughtPokemon.find(p => p.name === nameB)?.pokedexNumber || 0;
+                        return numA - numB;
+                    })
+                    .forEach(item => pokedexList.appendChild(item));
+            }
+        }
+
+        function updatePanelVisibility() { 
+            if (messageDisplay.textContent && messageDisplay.textContent.trim() !== "") {
+                bottomPanel.style.display = 'flex';
+                messageDisplay.style.display = 'block';
+            } else {
+                bottomPanel.style.display = 'none';
+            }
+        }
+        function showMessageForDuration(text, duration = 3000) { 
+            clearTimeout(messageTimeout);
+            messageDisplay.textContent = text;
+            messageDisplay.style.display = 'block';
+            bottomPanel.style.display = 'flex';
+            if (duration > 0) { messageTimeout = setTimeout(() => { messageDisplay.textContent = ""; updatePanelVisibility(); }, duration); }
+        }
+        function updateEncounterStatusMessage(text) { 
+            encounterStatusMessage.textContent = text;
+        }
+        function hideMessage() { 
+            clearTimeout(messageTimeout); messageDisplay.textContent = ""; updatePanelVisibility(); 
+        }
+
+        let frameCount = 0;
+        function animate() { 
+            frameCount++;
+            requestAnimationFrame(animate);
+            try {
+                if (currentEncounterState === 'ENDED' || (currentEncounterState === 'SELECT_ACTION' && !gamePaused)) { 
+                    updateGame(); 
+                }
+                
+                if (renderer && scene && camera) {
+                    renderer.render(scene, camera);
+                }
+                if (typeof TWEEN !== 'undefined') {
+                    TWEEN.update();
+                }
+            } catch (e) {
+                console.error("ERROR in animate loop:", e);
+            }
+        }
+        function onWindowResize() { 
+            camera.aspect = window.innerWidth / window.innerHeight; 
+            camera.updateProjectionMatrix(); 
+            renderer.setSize(window.innerWidth, window.innerHeight); 
+            if (encounterCamera && encounterRenderer) {
+                const encounterCanvasContainer = document.getElementById('encounter-pokemon-canvas-container');
+                encounterCamera.aspect = encounterCanvasContainer.offsetWidth / encounterCanvasContainer.offsetHeight;
+                encounterCamera.updateProjectionMatrix();
+                encounterRenderer.setSize(encounterCanvasContainer.offsetWidth, encounterCanvasContainer.offsetHeight);
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
+?
